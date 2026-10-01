@@ -6,7 +6,11 @@
 my_packages <- c("NetLogoR", "tidyr", "dplyr", "lubridate", "sf", "raster", "circular", 
                  "tidyverse", "sp", "CircStats", "REdaS")
 lapply(my_packages, library, character.only = TRUE)
+
+# choose one
 setwd("Z:/sl5145/ABM")
+setwd("D:/github/ABM_4-poster") # local computer
+setwd()
 
 landras <- raster("Connetquot_nlcd_01.tif")
 feederloc <- st_read("4posters_Connetquot.shp") %>% as_Spatial()
@@ -15,7 +19,7 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
 
 # create 1) a world layer that contains the location of feeder
 #        2) distance from the nearest feeders
-#        3) landscape for deer initializing 
+#        3) landscape for deer initialization 
 {
   emptyr <- landras
   values(emptyr) <- NA
@@ -39,12 +43,12 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   plot(zoneras)
   points(feederloc); points(camloc, pch = 18)
   
-  # 3) landscape for deer initializing (smaller)
+  # 3) landscape for deer initialization (smaller)
   initras <- terra::rasterize(terra::vect(inbuffer), terra::rast(emptyr), 1) %>% raster()
   initras[which(landras[] == 0)] <- 0
   #plot(initras)
   
-  # 4) Multiple feeder?
+  # 4) Multiple feeder overlap plot
   # Feeder location -- feeder ID 1 from the top & right
   feederloc.sf <- feederloc %>% st_as_sf()
   feeder.buffer <- st_buffer(feederloc.sf, dist = 300) # 300m
@@ -64,8 +68,12 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
 
 # [1] Create turtle groups randomly (The location is the HR center!) ----------------------------------------------
 {
-  N <- 176 # the number of groups !
-  greenpatch <- patches(initworld) %>% as_tibble() %>% mutate(lu = of(initworld, patches(initworld))) %>% filter(lu == 1) %>% dplyr::select(-lu)
+  N <- 176 # the number of deer groups !
+  greenpatch <- patches(initworld) %>% as_tibble() %>% 
+    mutate(lu = of(initworld, patches(initworld))) %>% # adds each cell’s value 
+    filter(lu == 1) %>% 
+    dplyr::select(-lu)
+  
   forsprout <- greenpatch %>% sample_n(N) %>% as.matrix()
   t1 <- sprout(patches = forsprout, n = N) # randomly
   t1 <- turtlesOwn(t1, tVar = "sex", tVal = sample(c(rep("F", 56), rep("M", 120)), size  = N)) # female:male = 7:3 (210 F/ 90 M)
@@ -74,26 +82,47 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
 }
 
 # [2] Each group is at least 200m away from each other ---------------------------------------------------------
-# inRadius result: 'who' -- 'who' numbers from the second agent
-#                  'id' -- agents from the first agent
 {
-  tryi <- 1
-  while(!nrow(inRadius(t1, 6, t1) %>% filter(who+1 != id)) == 0){ 
-    move.who <- inRadius(t1, 6, t1) %>% filter(who+1 != id) %>% pull(who) %>% unique()
-    print(paste0(tryi, " try; n = ", length(move.who), " turtles have to be moved"))
-    
-    empty <- inRadius(greenpatch %>% as.matrix(), 6, t1, world = initworld) %>% pull(id)
-    emptyid <- setdiff(1:nrow(greenpatch), empty)
-    for (i in 1:length(move.who)) {
-      t1[(move.who[i] + 1), ] <- moveTo(turtle(t1, who = move.who[i]), as.matrix(greenpatch[sample(emptyid, 1),]))
-    }
-    tryi <- tryi + 1
-  }
-  #plot(myworld); points(t1, pch = 23, col = t1$sex %>% recode("F" = "red", "M" = "blue"), bg = "white", lw = 2)
+  # Eligible starting locations: one row per patch, with x/y coordinates.
+  coords <- as.matrix(greenpatch)
+  # eligible patches
+  available <- seq_len(nrow(coords))
   
-  # group assign
-  t1 <- turtlesOwn(t1, tVar = "group", tVal = 1:N)
+  n_groups <- nrow(t1)
+  selected <- integer(n_groups)
+  
+  # Required separation in world units, assuming 30 m per unit.
+  min_gap <- 200 / 30
+  
+  for (k in seq_len(n_groups)) {
+    # Stop if this random arrangement runs out of eligible locations.
+    if (length(available) == 0L) {
+      stop("Placement ran out of candidates; retry or reduce group density.")
+    }
+    
+    # Randomly select one available patch for group k.
+    chosen <- available[sample.int(length(available), 1L)]
+    selected[k] <- chosen
+    
+    # Calculate x/y differences from the chosen patch.
+    offsets <- sweep(
+      coords[available, , drop = FALSE],
+      2,
+      coords[chosen, ],
+      "-")
+    
+    # Keep only patches at least 200 m from this group center.
+    # Previously excluded patches stay excluded.
+    available <- available[
+      rowSums(offsets^2) >= min_gap^2
+    ]
+  }
+  
+  # Move the existing turtles; do not create new ones.
+  t1 <- moveTo(t1, coords[selected, , drop = FALSE])
+  t1 <- turtlesOwn(t1, tVar = "group", tVal = seq_len(n_groups))
 }
+
 
 # [3] female group size = 5 --------------------------------------------------------------------------
 {
