@@ -4,17 +4,19 @@
 #                             2.draw.ta.sl() function!
 
 my_packages <- c("NetLogoR", "tidyr", "dplyr", "lubridate", "sf", "raster", "circular", 
-                 "tidyverse", "sp", "CircStats", "REdaS")
+                 "tidyverse", "sp", "CircStats", "REdaS", "terra")
 lapply(my_packages, library, character.only = TRUE)
 
 # choose one
 setwd("Z:/sl5145/ABM")
-setwd("D:/github/ABM_4-poster") # local computer
-setwd()
+setwd("D:/github/ABM_4-poster") # home computer
 
+
+# import variables 
 landras <- raster("Connetquot_nlcd_01.tif")
 feederloc <- st_read("4posters_Connetquot.shp") %>% as_Spatial()
 camloc <- st_read("Cams_Connetquot.shp") %>% as_Spatial()
+cambuffer <- st_read("Cams_Connetquot.shp") %>% st_buffer(dist = 100) %>% as_Spatial()
 inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
 
 # create 1) a world layer that contains the location of feeder
@@ -24,17 +26,41 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   emptyr <- landras
   values(emptyr) <- NA
   
-  # 1) a world layer that contains the location of feeder
+  # 1) feeder location 01 raster 
   feedras <- emptyr
   feedras[which(landras[] == 1 | landras[] == 0)] <- 0
   feedras[cellFromXY(feedras, feederloc)] <- 1
-  #plot(feedras)
+  plot(feedras)
+  
+  # 1-2) cam location 01 raster
+  camras <- emptyr
+  camras[which(landras[] == 1 | landras[] == 0)] <- 0
+  camras[cellFromXY(camras, camloc)] <- 1
+  plot(camras)
+  
+  # 1-3) cam buffer w/ unique id raster
+  cambuffras <- emptyr
+  cambuffras[which(landras[] == 1 | landras[] == 0)] <- 0
+  original_na <- is.na(cambuffras[]) # Remember which cells were originally outside your valid landscape.
+  
+  cam_ids <- rasterize(
+    x = vect(cambuffer),    # buffer polygons
+    y = rast(cambuffras),    # existing raster template
+    field = "camera",              # ID to assign: 1–13
+    background = 0,               # cells outside buffers
+    touches = F                # include any cell touched by a buffer
+  )
+  
+  # Convert back to RasterLayer for compatibility with your existing code
+  cambuffras <- raster::raster(cam_ids)
+  cambuffras[original_na] <- NA # Restore the original NA mask
+  plot(cambuffras)
   
   # 2) distance from the nearest feeders
   feederloc_vect <- terra::vect(feederloc) # Convert the SpatialPointsDataFrame to an SpatVector (for terra distance function)
   distras <- terra::distance(terra::rast(emptyr), feederloc_vect) %>% raster()
   distras[which(is.na(landras[]))] <- NA
-  #plot(distras)
+  plot(distras)
   
   # 2-1) Zone map
   zoneras <- emptyr
@@ -46,7 +72,7 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   # 3) landscape for deer initialization (smaller)
   initras <- terra::rasterize(terra::vect(inbuffer), terra::rast(emptyr), 1) %>% raster()
   initras[which(landras[] == 0)] <- 0
-  #plot(initras)
+  plot(initras)
   
   # 4) Multiple feeder overlap plot
   # Feeder location -- feeder ID 1 from the top & right
@@ -60,13 +86,17 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   landras[which(landras[] == 0)] <- NA
   myworld <- raster2world(landras)
   feedworld <- raster2world(feedras)
+  camworld <- raster2world(camras)
+  cambuffworld <- raster2world(cambuffras)
   distworld <- raster2world(distras)
   zoneworld <- raster2world(zoneras)
-  initworld <- raster2world(initras)}
+  initworld <- raster2world(initras)
+  }
 
 
-
-# [1] Create turtle groups randomly (The location is the HR center!) ----------------------------------------------
+# ---------------------------------------------------------------------------------------------- #
+# [1] Create turtle groups randomly (The location is the HR center!) -------
+# ---------------------------------------------------------------------------------------------- #
 {
   N <- 176 # the number of deer groups !
   greenpatch <- patches(initworld) %>% as_tibble() %>% 
@@ -76,12 +106,15 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   
   forsprout <- greenpatch %>% sample_n(N) %>% as.matrix()
   t1 <- sprout(patches = forsprout, n = N) # randomly
-  t1 <- turtlesOwn(t1, tVar = "sex", tVal = sample(c(rep("F", 56), rep("M", 120)), size  = N)) # female:male = 7:3 (210 F/ 90 M)
+  t1 <- turtlesOwn(t1, tVar = "sex", tVal = sample(c(rep("F", 56), rep("M", 120)), 
+                                                   size  = N)) # female:male = 7:3 (210 F/ 90 M)
   
   plot(initworld); points(t1, pch = 23, col = t1$sex %>% recode("F" = "red", "M" = "blue"), bg = "white", lw = 2)
 }
 
-# [2] Each group is at least 200m away from each other ---------------------------------------------------------
+# ---------------------------------------------------------------------------------------------- #
+# [2] Each group is at least 200m away from each other -------------
+# ---------------------------------------------------------------------------------------------- #
 {
   # Eligible starting locations: one row per patch, with x/y coordinates.
   coords <- as.matrix(greenpatch)
@@ -123,43 +156,66 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   t1 <- turtlesOwn(t1, tVar = "group", tVal = seq_len(n_groups))
 }
 
-
-# [3] female group size = 5 --------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------- #
+# [3] female group size = 5 -------
+# ---------------------------------------------------------------------------------------------- #
 {
-  t1.sf <- turtles2sf(t1)
-  ft1.sf <- t1.sf %>% filter(sex == "F")
-  mt1.sf <- t1.sf %>% filter(sex == "M")
+  # Read the existing turtles' coordinates and stored attributes.
+  group_data <- as.data.frame(t1@.Data)
   
-  whovec <- seq(200, 199 + (4*56))
-  f.add <- ft1.sf[rep(seq_len(nrow(ft1.sf)), each = 5), ]
-  f.add[-c(1, seq(6, nrow(f.add), 5)),]$who <- whovec # change the 'who' of added females
-  shiftx <- runif(nrow(f.add), min = -1, max = 1)
-  shifty <- runif(nrow(f.add), min = -1, max = 1)
+  # Use the readable sex labels to identify female groups.
+  # Keep the stored sex values for copying into t3 later.
+  group_data$is_female <- turtles2sf(t1)$sex == "F"
   
-  newx <- st_coordinates(f.add)[,"X"] + shiftx
-  newy <- st_coordinates(f.add)[,"Y"] + shifty
+  # Repeat female rows five times and male rows once.
+  # Sorting keeps all members of each group together.
+  deer_init <- group_data %>%
+    mutate(group_size = if_else(is_female, 5L, 1L)) %>%
+    tidyr::uncount(weights = group_size) %>%
+    arrange(group)
   
-  f.add <- f.add %>% mutate(newx = newx, newy = newy) %>% st_drop_geometry() %>% st_as_sf(coords = c("newx", "newy"))
+  # Identify the expanded female rows.
+  female_rows <- which(deer_init$is_female)
+  n_females <- length(female_rows)
   
-  t2 <- sf2turtles(rbind(f.add,mt1.sf) %>% arrange(group))
-  t2@.Data
+  # Give every female an independent offset around her group center.
+  # As before, offsets are ±1 world unit along each axis.
+  # Male coordinates remain unchanged.
+  deer_init$xcor[female_rows] <- deer_init$xcor[female_rows] +
+    runif(n_females, -1, 1)
   
-  # the final deer turtles; group members start at the same place, 200m away from every group (including males)
-  t3 <- createTurtles(n = nrow(t2), coords = t2@.Data[,1:2])
-  t3 <- turtlesOwn(t3, tVar = "sex", tVal = t2@.Data[,"sex"])
-  t3 <- turtlesOwn(t3, tVar = "group", tVal = t2@.Data[,"group"])
+  deer_init$ycor[female_rows] <- deer_init$ycor[female_rows] +
+    runif(n_females, -1, 1)
+  
+  # Create the final population with fresh turtle IDs.
+  # Select coordinates by name rather than by column position.
+  t3 <- createTurtles(
+    n = nrow(deer_init),
+    coords = as.matrix(deer_init[, c("xcor", "ycor")])
+  )
+  
+  # Restore the attributes needed by leader assignment and the ABM.
+  t3 <- turtlesOwn(t3, tVar = "sex", tVal = deer_init$sex)
+  t3 <- turtlesOwn(t3, tVar = "group", tVal = deer_init$group)
 }
 
-# [4] Assign leader for each group (random)  ---------------------------------------------------------------------------
+# therefore, 
+
+# ---------------------------------------------------------------------------------------------- #
+# [4] Assign leader for each group (random)  ---------------
+# ---------------------------------------------------------------------------------------------- #
 {
-  leadervec <- t3@.Data %>% as.data.frame() %>% group_by(group) %>% mutate(leader = first(who)) %>% pull(leader)
-  t3 <- turtlesOwn(t3, tVar = "leader", tVal = leadervec)
-  leaderYNvec <- t3@.Data %>% as.data.frame() %>% mutate(leaderYN = ifelse(who == leader, 1, 0)) %>% pull(leaderYN)
+  # add 'leaderwho': who is leader of that group?
+  leaderwhovec <- t3@.Data %>% as.data.frame() %>% group_by(group) %>% mutate(leaderwho = first(who)) %>% pull(leaderwho)
+  t3 <- turtlesOwn(t3, tVar = "leaderwho", tVal = leaderwhovec)
+  # add 'leaderYN': is that turtle leader of that group?
+  leaderYNvec <- t3@.Data %>% as.data.frame() %>% mutate(leaderYN = ifelse(who == leaderwho, 1, 0)) %>% pull(leaderYN)
   t3 <- turtlesOwn(t3, tVar = "leaderYN", tVal = leaderYNvec)
 }
 
-
-# Get ready for the ABM ----------------------------------------------------------------------------------------------
+# ---------------------------------------------------------------------------------------------- #
+# Get ready for the ABM --------
+# ---------------------------------------------------------------------------------------------- #
 {
   # FEEDER ATTRACTION -- two centers approach ###########
   {
@@ -175,6 +231,9 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
     nearestfeedervec <- st_nearest_feature(deer.t.leader.sf, feederloc.sf) # Identify the ids of feeder that is the nearest to each turtle's HR center (per group and expand)
     groupfeederdf <- data.frame(group = 1:N, nearfeederID = nearestfeedervec)
     
+    # cam location
+    camloc.sf <- rasterToPoints(world2raster(camworld), fun = function(x){x == 1}, spatial = T) %>% st_as_sf()
+    
     # Specify each deer's zonal information
     zone.pergroup <- of(world = zoneworld, agents = patchHere(zoneworld, deer.t.leader))
     groupzonedf <- data.frame(group = 1:N, zone = zone.pergroup)
@@ -182,6 +241,7 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
     # join nearest feeder ID and zone information to turtles (generate t4)
     deer.t.sf <- deer.t.sf %>% left_join(groupfeederdf, by = "group") %>% left_join(groupzonedf, by = "group") 
     
+    # new turtle with nearest feeder & current zone information 
     t4 <- sf2turtles(deer.t.sf)
     deer.t.leader.sf <- deer.t.sf %>% filter(leaderYN == 1)
     deer.t.leader <- sf2turtles(deer.t.leader.sf)
@@ -198,12 +258,24 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   # Home range center save!
   hr.center <- t4@.Data %>% as.data.frame() %>% filter(leaderYN == 1) %>% as.data.frame()
   hr.center.sf <- st_as_sf(hr.center, coords = c("xcor", "ycor"))
-  
 }
 
-plot(myworld, main = "timestep = 0 (initial)"); points(deer.t, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
+t4 # all turtles with nearest feeder & current zone info
+deer.t.leader # leader turtles with nearest feeder & current zone info
+feeder.center.sf # only leaders -- feeder location sf
+hr.center.sf # only leaders -- HR center location sf
 
-t.end <- 12 * 30 # # of simulation days (2-hr each step), need burn-in period
+plot(myworld, main = "timestep = 0 (initial)"); points(t4, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
+
+
+# ---------------------------------------------------------------------------------------------- #
+# [5] runABM function  ------
+# ---------------------------------------------------------------------------------------------- #
+# number of simulation days (2-hr each step), need burn-in period
+t.end <- 12 * 30 # 30 days (1 month)
+# 
+
+
 totalNsimul <- 5
 select.feeder.prob.vec <- c(0, 0.1, 0.2, 0.3, 0.2, 0.1, 0)  # control -- value is 0
 
@@ -258,6 +330,8 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
     }
     
     # Ultimate draw TA and SA combined for leaders
+    # k: number of candidates
+    # distances: distance from hr center
     draw.ta.sl <- function(k, distances){
       ta.val <- sample.ta(k, distances)
       ta.val[1] <- ta.val[1] %>% rad2deg()
@@ -273,7 +347,10 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
         test.t <- zone.deer.t.leader.hr[k] %>% right(ta.val[1]) %>% fd(sl.val[1]) # zonal
       }
       
-      return(c(ta = ta.val[1], sl = sl.val[1], joint = ta.val[2]*sl.val[2]))
+      return(c(ta = ta.val[1], 
+               sl = sl.val[1], 
+               joint = ta.val[2]*sl.val[2]) # joint probability 
+             )
     }
     
     # [2] FOLLOWERS
@@ -289,6 +366,7 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
     }
   }
   
+  # save results for N simulations
   reslist <- vector(mode = "list", length = totalNsimul)
   
   simN <- 1
@@ -305,13 +383,14 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
     
     passageworld <- createWorld(minPxcor(myworld), maxPxcor(myworld), minPycor(myworld), maxPycor(myworld), data = 0)
     
-    i <- 1 
-    fp <- select.feeder.prob.vec
+    i <- 1 # timestep
+    fp <- select.feeder.prob.vec # feeder selection probability 
     N.zone <- 7
     
-    for(i in 1:t.end){
-      for (ii in 1:N.zone) { # zonal loop start ()
-        # MOVE GROUP LEADERS =======================================================================================
+    for(i in 1:t.end){ # t.end (for each time step)
+      # MOVE GROUP LEADERS =======================================================================================
+      
+      for (ii in 1:N.zone) { # zonal loop.. for each zone,
         zone.deer.t.leader.sf <- deer.t.leader.sf %>% filter(zone == ii)
         
         turtleN.zone <- nrow(zone.deer.t.leader.sf)
@@ -363,7 +442,8 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
           zone.deer.t.leader.fd <- sf2turtles(zone.deer.t.leader.sf.fd)
           
           # TA -- It directly faces the feeder
-          angle.to.fd <- towards(zone.deer.t.leader.fd, as.matrix(feeder.center[which.fd, 1:2]))
+          feeder.center.zone <- feeder.center %>% filter(group %in% zone.deer.t.leader.sf.fd$group)
+          angle.to.fd <- towards(zone.deer.t.leader.fd, as.matrix(feeder.center.zone[, 1:2]))
           turning.to.fd <- sapply(1:N.fd, function(x){
             currentH <- zone.deer.t.leader.fd@.Data[x,"heading"]
             
@@ -415,7 +495,8 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
         assign(paste0("zone", ii, ".deer.t.leader"), zone.deer.t.leader)
         assign(paste0("zone", ii, ".movemat"), movemat)
         
-        plot(myworld, main = paste0("timestep = ", i)); points(deer.t.leader, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
+        # plot(myworld, main = paste0("timestep = ", i)); points(deer.t.leader, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
+        
       } # the end of zonal loop
       
       # merge zonal loop results (turtles and movemat)
@@ -455,35 +536,81 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
       sldf2 <- data.frame(who = deer.t.follower.sf$who, sl = sl.follow)
       sldf.both <- rbind(sldf1, sldf2) %>% arrange(who)
       
-      routedf = data.frame()
-      for (j in 1:nrow(deer.t)) {
-        dist.taken <- sldf.both[j, "sl"] # a vector of SLs taken at this time step
+      # Read turtle data once for this timestep.
+      deer_data <- deer.t@.Data
+      
+      # Allocate one list entry per deer.
+      routes <- vector("list", nrow(deer_data))
+      
+      for (j in seq_along(routes)) {
         
-        tt <- deer.t@.Data[j,] 
-        prevpatches <- tt[c("prevX", "prevY")] %>% as.matrix() %>% t() # extract previous patch coords
-        pass <- patchDistDir(myworld, prevpatches, dist = seq(0, dist.taken, 0.1), angle = deer.t@.Data[j,"heading"]) %>% unique()
-        pass # identify all patches that animal has passed
+        # Previous coordinates, preserved as a one-row matrix.
+        previous_xy <- deer_data[
+          j, c("prevX", "prevY"), drop = FALSE
+        ]
         
-        routedf <- rbind(routedf, pass)
+        # Keep the same route sampling interval as your original code.
+        passed <- patchDistDir(
+          myworld,
+          previous_xy,
+          dist = seq(0, sldf.both[j, "sl"], by = 0.1),
+          angle = deer_data[j, "heading"]
+        )
+        
+        # Each deer contributes at most one count per patch per timestep.
+        routes[[j]] <- as.data.frame(unique(passed))
       }
       
-      routedf <- routedf %>% na.omit()
-      passage.loc <- routedf %>% group_by(pxcor, pycor) %>% unique() %>% as.data.frame()
-      passage.n <- routedf %>% group_by(pxcor, pycor) %>% arrange(pxcor) %>% summarise(n= n()) %>% pull(n)
+      # Combine once, then calculate coordinates and counts together.
+      passage_counts <- dplyr::bind_rows(routes) %>%
+        filter(!is.na(pxcor), !is.na(pycor)) %>%
+        count(pxcor, pycor, name = "n")
       
+      if (nrow(passage_counts) > 0L) {
+        passageworld[
+          passage_counts$pxcor, passage_counts$pycor
+        ] <- passageworld[
+          passage_counts$pxcor, passage_counts$pycor
+        ] + passage_counts$n
+      }
       
-      passageworld[passage.loc[,1], passage.loc[,2]] <-  passageworld[passage.loc[,1], passage.loc[,2]] + passage.n
-    }
+      # routedf = data.frame()
+      # for (j in 1:nrow(deer.t)) {
+      #   dist.taken <- sldf.both[j, "sl"] # a vector of SLs taken at this time step
+      #   
+      #   tt <- deer.t@.Data[j,] 
+      #   prevpatches <- tt[c("prevX", "prevY")] %>% as.matrix() %>% t() # extract previous patch coords
+      #   pass <- patchDistDir(myworld, prevpatches, dist = seq(0, dist.taken, 0.1), 
+      #                        angle = deer.t@.Data[j,"heading"]) %>% unique()
+      #   pass # identify all patches that animal has passed
+      #   
+      #   routedf <- rbind(routedf, pass)
+      # }
+      # 
+      # routedf <- routedf %>% na.omit()
+      # passage.loc <- routedf %>% group_by(pxcor, pycor) %>% unique() %>% as.data.frame()
+      # passage.n <- routedf %>% group_by(pxcor, pycor) %>% arrange(pxcor) %>% 
+      #   summarise(n=n(), .groups ="drop_last") %>% pull(n)
+      # 
+      # 
+      # passageworld[passage.loc[,1], passage.loc[,2]] <-  passageworld[passage.loc[,1], passage.loc[,2]] + passage.n
     
+      cat(paste0(simN, "-", i, " "))
+    } # end of each time step
     
+    # plotting ---- # 
     colfunc <- colorRampPalette(c("white", "darkgreen", "red"))
-    plot(passageworld, col = colfunc(30), main = "Number of passages")
-    points(st_coordinates(feederloc.sf)[,"X"], st_coordinates(feederloc.sf)[,"Y"], pch = 8, lwd = 2, col = "yellow")
-    points(hr.center$xcor, hr.center$ycor, pch = 8, lwd = 2, col = "blue")
-    # initial plot
-    #plot(myworld, main = "timestep = 0 (initial)"); points(deer.t, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
     
-    reslist[[simN]] <- sapply(1:7, function(x) mean(passageworld[which(zoneworld[] == x)]))
+    plot(passageworld, col = colfunc(30), main = "Number of passages")
+    points(st_coordinates(feederloc.sf)[,"X"], st_coordinates(feederloc.sf)[,"Y"], 
+           pch = 8, lwd = 2, col = "yellow")
+    points(hr.center$xcor, hr.center$ycor, pch = 8, lwd = 2, col = "blue")
+    points(camloc.sf, pch = 1, lwd = 2)
+    # initial plot
+    plot(myworld, main = "timestep = 0 (initial)"); points(t4, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
+    # ------------- # 
+    
+    reslist[[simN]] <- passageworld
     
     simN <- simN + 1
   }
@@ -492,31 +619,62 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
 }
 
 # Same deer initial population distribution
-res0 <- runABM(t.end, select.feeder.prob = 0, totalNsimul = 5) # control
-res0.1 <- runABM(t.end, select.feeder.prob = 0.1, totalNsimul = 5) # feeder 1
-res0.3 <- runABM(t.end, select.feeder.prob = 0.3, totalNsimul = 5) # feeder 2
-
-save(list = c("res0", "res0.1", "res0.3"), file = "Result/Twocenters_result_0_0.1_0.3.Rdata")
+res.control <- runABM(t.end, select.feeder.prob.vec = rep(0, 7), totalNsimul = 3) # control
+res.default <- runABM(t.end, select.feeder.prob.vec = c(0, 0.1, 0.2, 0.3, 0.2, 0.1, 0) , totalNsimul = 3) # deafult vector testing
+res.strong <- runABM(t.end, select.feeder.prob.vec = c(0, 0.3, 0.4, 0.5, 0.2, 0.1, 0) , totalNsimul = 3) # deafult vector testing
 
 
-# Per zone plot
-load("Result/Twocenters_result_0_0.1_0.3.Rdata")
-map_dbl(res0, 1)
-res0.mean <- sapply(1:6, function(x) mean(map_dbl(res0, x)))
-res0.1.mean <- sapply(1:6, function(x) mean(map_dbl(res0.1, x)))
-res0.3.mean <- sapply(1:6, function(x) mean(map_dbl(res0.3, x)))
+colfunc <- colorRampPalette(c("white", "darkgreen", "red"))
+plot(res.control[[1]], col = colfunc(30))
+points(camloc.sf, pch = 1, lwd = 2)
 
-dfdf <- data.frame(zone = 1:6, res0 = res0.mean, res0.1 = res0.1.mean, res0.3 = res0.3.mean)
-dfdfvis <- dfdf %>% pivot_longer(cols = 2:4, names_to = "Type")
-ggplot(dfdfvis, mapping = aes(zone, value, color = Type)) + geom_point() + geom_line() 
-
-# do a buffer around the cam location?
-# if they move small dist, then it means less passage rate in total than when it took a longer step -- how to tackle this?
+lapply(1:13, function(x) {
+  mean(
+    res.control[[1]][][which(cambuffworld[] == x)],
+    na.rm = TRUE
+  )
+})
 
 
 
+# <to do list>
+# change the structure of fp to curve (less parameters)
+# calibration of fp .. based on a buffer around the cam location?
 
 
+
+# export the passageworld and convert it into a raster with original extent and crs
+back2ras <- function(x){
+  # Convert the NetLogoR world into a RasterLayer.
+  x_ras <- NetLogoR::world2raster(x)
+  
+  # Confirm it has the same grid dimensions as the original landscape.
+  stopifnot(
+    nrow(x_ras) == nrow(x),
+    ncol(x_ras) == ncol(x)
+  )
+  
+  # Restore the original geographic extent and coordinate system.
+  # Setting the extent also restores the original cell resolution.
+  raster::extent(x_ras) <- raster::extent(landras)
+  raster::crs(x_ras) <- raster::crs(landras)
+  
+  return(x_ras)
+}
+
+
+raster::writeRaster(
+  back2ras(res.control[[2]]),
+  filename = "Results.prelim/passageworld.tif",
+  format = "GTiff",
+  overwrite = TRUE
+)
+raster::writeRaster(
+  back2ras(cambuffworld),
+  filename = "Results.prelim/cambuffworld.tif",
+  format = "GTiff",
+  overwrite = TRUE
+)
 
 
 
