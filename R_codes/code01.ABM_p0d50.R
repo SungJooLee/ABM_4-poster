@@ -685,12 +685,17 @@ runABM_distance <- function(t.end, p0, d50, totalNsimul = 5,
 # test simulation
 set.seed(123)
 
+res.control <- runABM_distance(
+  t.end = 200,
+  p0 = 0, d50 = 500,
+  totalNsimul = 1,
+  verbose = T
+)
 res.test <- runABM_distance(
   t.end = 200,        # one simulated day
   p0 = 0.3,         # illustrative, not calibrated
   d50 = 250,        # meters
   totalNsimul = 1,
-  plot_results = TRUE,
   verbose = T
 )
 
@@ -702,7 +707,7 @@ points(camloc.sf, pch = 4, lwd = 2) # x -- cam location
 
 
 
-# explore fp function
+# Explore fp function ----------
 feeder_prob <- function(distance_m, p0, d50) {
   p0 * 2^(-distance_m / d50)
 }
@@ -737,12 +742,12 @@ legend(
 
 
 # <to do list>
-# change the structure of fp to curve (less parameters)
+# HR generations?
 # calibration of fp .. based on a buffer around the cam location?
 
 
 
-# export the passageworld and convert it into a raster with original extent and crs
+# Export worlds and convert them into a raster with original extent and crs----------
 back2ras <- function(x){
   # Convert the NetLogoR world into a RasterLayer.
   x_ras <- NetLogoR::world2raster(x)
