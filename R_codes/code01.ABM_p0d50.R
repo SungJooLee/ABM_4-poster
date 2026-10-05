@@ -4,13 +4,12 @@
 #                             2.draw.ta.sl() function!
 
 my_packages <- c("NetLogoR", "tidyr", "dplyr", "lubridate", "sf", "raster", "circular", 
-                 "tidyverse", "sp", "CircStats", "REdaS", "terra")
+                 "tidyverse", "sp", "CircStats", "REdaS")
 lapply(my_packages, library, character.only = TRUE)
 
 # choose one
 setwd("Z:/sl5145/ABM")
 setwd("D:/github/ABM_4-poster") # home computer
-
 
 # import variables 
 landras <- raster("Connetquot_nlcd_01.tif")
@@ -44,8 +43,8 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   original_na <- is.na(cambuffras[]) # Remember which cells were originally outside your valid landscape.
   
   cam_ids <- rasterize(
-    x = vect(cambuffer),    # buffer polygons
-    y = rast(cambuffras),    # existing raster template
+    x = terra::vect(cambuffer),    # buffer polygons
+    y = terra::rast(cambuffras),    # existing raster template
     field = "camera",              # ID to assign: 1–13
     background = 0,               # cells outside buffers
     touches = F                # include any cell touched by a buffer
@@ -91,7 +90,7 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   distworld <- raster2world(distras)
   zoneworld <- raster2world(zoneras)
   initworld <- raster2world(initras)
-  }
+}
 
 
 # ---------------------------------------------------------------------------------------------- #
@@ -156,6 +155,7 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   t1 <- turtlesOwn(t1, tVar = "group", tVal = seq_len(n_groups))
 }
 
+
 # ---------------------------------------------------------------------------------------------- #
 # [3] female group size = 5 -------
 # ---------------------------------------------------------------------------------------------- #
@@ -198,8 +198,6 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
   t3 <- turtlesOwn(t3, tVar = "sex", tVal = deer_init$sex)
   t3 <- turtlesOwn(t3, tVar = "group", tVal = deer_init$group)
 }
-
-# therefore, 
 
 # ---------------------------------------------------------------------------------------------- #
 # [4] Assign leader for each group (random)  ---------------
@@ -271,15 +269,63 @@ plot(myworld, main = "timestep = 0 (initial)"); points(t4, pch = 23, col = t3$se
 # ---------------------------------------------------------------------------------------------- #
 # [5] runABM function  ------
 # ---------------------------------------------------------------------------------------------- #
-# number of simulation days (2-hr each step), need burn-in period
-t.end <- 12 * 30 # 30 days (1 month)
-# 
+# Distance-based alternative to runABM in code01.
+# Source this file after the landscape, t4, home centers, and feeders are prepared.
+# Sourcing defines the function only; it does not run a simulation.
+#
+# Estimate TWO parameters: p0 in [0,1], and d50 > 0 in meters.
+# p(group) = p0 * 2^(-initial_home_to_assigned_feeder_distance_m / d50).
+# Distances and assignments stay fixed throughout each run.
+# The existing two-hour timestep and 30 m/world-unit convention are retained.
+#
+# Outputs: the same list of passageworld objects as the current repository runABM.
+# Required globals/packages are the same as the original movement function.
+# Additional corrections: group-matched feeder targets/distances; empty/all-feeder
+# zonal merges; and the existing 365-degree wrap typo corrected to 360 degrees.
+# Candidate selection, rejection sampling, follower movement, and passage counting
+# otherwise follow the current repository version. Plotting/progress are optional.
+# Runtime validation in R is still required; this environment has no R installation.
 
-
-totalNsimul <- 5
-select.feeder.prob.vec <- c(0, 0.1, 0.2, 0.3, 0.2, 0.1, 0)  # control -- value is 0
-
-runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
+runABM_distance <- function(t.end, p0, d50, totalNsimul = 5,
+                            plot_results = FALSE, verbose = FALSE) {
+  # p0 is a probability per two-hour decision, not an arrival rate.
+  stopifnot(
+    is.numeric(p0), length(p0) == 1L, is.finite(p0), p0 >= 0, p0 <= 1,
+    is.numeric(d50), length(d50) == 1L, is.finite(d50), d50 > 0,
+    is.numeric(t.end), length(t.end) == 1L, is.finite(t.end),
+    t.end >= 1, t.end == floor(t.end),
+    is.numeric(totalNsimul), length(totalNsimul) == 1L,
+    is.finite(totalNsimul), totalNsimul >= 1,
+    totalNsimul == floor(totalNsimul)
+  )
+  
+  # Home centers and assigned feeder coordinates use NetLogoR world units.
+  # Preserve the existing model's conversion of one world unit to 30 m.
+  stopifnot(
+    !anyDuplicated(hr.center$group),
+    !anyDuplicated(feeder.center$group)
+  )
+  feeder_rows <- match(hr.center$group, feeder.center$group)
+  if (anyNA(feeder_rows)) {
+    stop("Every home-range group needs an assigned feeder in feeder.center.")
+  }
+  
+  home_xy <- as.matrix(hr.center[, c("xcor", "ycor")])
+  assigned_feeder_xy <- as.matrix(
+    feeder.center[feeder_rows, c("X", "Y"), drop = FALSE]
+  )
+  distance_m <- sqrt(rowSums((home_xy - assigned_feeder_xy)^2)) * 30
+  if (any(!is.finite(distance_m))) {
+    stop("Home-range and feeder coordinates must be finite.")
+  }
+  
+  # fp function define #############################
+  # Fixed probability per group: p0 at distance 0, p0/2 at distance d50.
+  # Calculate once, then retrieve by group ID rather than zone number.
+  fp_by_group <- setNames(
+    p0 * 2^(-distance_m / d50),
+    as.character(hr.center$group)
+  )
   # MOVEMENT RANDOM SAMPLING
   { # [1] LEADERS 
     # TA -- wrapped cauchy distribution (focused: the most likely TA (peak prob) is angle.to.hr & 
@@ -350,7 +396,7 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
       return(c(ta = ta.val[1], 
                sl = sl.val[1], 
                joint = ta.val[2]*sl.val[2]) # joint probability 
-             )
+      )
     }
     
     # [2] FOLLOWERS
@@ -384,7 +430,7 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
     passageworld <- createWorld(minPxcor(myworld), maxPxcor(myworld), minPycor(myworld), maxPycor(myworld), data = 0)
     
     i <- 1 # timestep
-    fp <- select.feeder.prob.vec # feeder selection probability 
+    # Group-specific probabilities were calculated before the replicate loop.
     N.zone <- 7
     
     for(i in 1:t.end){ # t.end (for each time step)
@@ -394,12 +440,28 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
         zone.deer.t.leader.sf <- deer.t.leader.sf %>% filter(zone == ii)
         
         turtleN.zone <- nrow(zone.deer.t.leader.sf)
+        
+        # Empty zones still need empty outputs for the later zonal merge.
+        if (turtleN.zone == 0L) {
+          assign(paste0("zone", ii, ".deer.t.leader"),
+                 deer.t.leader[integer(0), ])
+          assign(paste0("zone", ii, ".movemat"),
+                 data.frame(who = numeric(0), dist = numeric(0)))
+          next
+        }
+        
+        fp <- unname(fp_by_group[
+          as.character(zone.deer.t.leader.sf$group)
+        ])
+        if (anyNA(fp)) {
+          stop("A leader group is missing from the fixed attraction table.")
+        }
         v <- runif(turtleN.zone, 0, 1)
         
-        N.hr <- length(which(v >= fp[ii])) # leaders heading HR center
-        which.hr <- which(v >= fp[ii])
-        N.fd <- length(which(v < fp[ii])) # leaders heading to feeders
-        which.fd <- which(v < fp[ii])
+        which.hr <- which(v >= fp)
+        which.fd <- which(v < fp)
+        N.hr <- length(which.hr)
+        N.fd <- length(which.fd)
         
         if(N.hr > 0){ # HR center use
           zone.deer.t.leader.sf.hr <- zone.deer.t.leader.sf[which.hr,]
@@ -415,7 +477,7 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
             currentH <- zone.deer.t.leader.hr@.Data[x,"heading"]
             
             if(currentH > angle.to.hr[x]){
-              angle.to.hr[x] + (365 - currentH)
+              angle.to.hr[x] + (360 - currentH)
             }else if(currentH < angle.to.hr[x]){
               angle.to.hr[x] - currentH
             }else if(currentH == angle.to.hr[x]){
@@ -434,7 +496,7 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
           
           # turn and go straight
           zone.deer.t.leader.hr.upd <- zone.deer.t.leader.hr %>% right(movemat.hr[1,]) %>% fd(movemat.hr[2,])
-         
+          
         }
         
         if(N.fd > 0){ # Feeder center use
@@ -442,13 +504,20 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
           zone.deer.t.leader.fd <- sf2turtles(zone.deer.t.leader.sf.fd)
           
           # TA -- It directly faces the feeder
-          feeder.center.zone <- feeder.center %>% filter(group %in% zone.deer.t.leader.sf.fd$group)
-          angle.to.fd <- towards(zone.deer.t.leader.fd, as.matrix(feeder.center.zone[, 1:2]))
+          # Match every mover to its own feeder, preserving mover order.
+          feeder_rows_zone <- match(
+            zone.deer.t.leader.sf.fd$group,
+            feeder.center$group
+          )
+          target_fd_xy <- as.matrix(
+            feeder.center[feeder_rows_zone, c("X", "Y"), drop = FALSE]
+          )
+          angle.to.fd <- towards(zone.deer.t.leader.fd, target_fd_xy)
           turning.to.fd <- sapply(1:N.fd, function(x){
             currentH <- zone.deer.t.leader.fd@.Data[x,"heading"]
             
             if(currentH > angle.to.fd[x]){
-              angle.to.fd[x] + (365 - currentH)
+              angle.to.fd[x] + (360 - currentH)
             }else if(currentH < angle.to.fd[x]){
               angle.to.fd[x] - currentH
             }else if(currentH == angle.to.fd[x]){
@@ -458,7 +527,10 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
           
           # SL selection
           # calculate distance from HR center and the current location (leaders)
-          distances <- st_distance(zone.deer.t.leader.sf.fd, feeder.center.sf[which.fd, ], by_element = T)*30
+          current_fd_xy <- zone.deer.t.leader.fd@.Data[
+            , c("xcor", "ycor"), drop = FALSE
+          ]
+          distances <- sqrt(rowSums((current_fd_xy - target_fd_xy)^2)) * 30
           SLs <- sapply(1:N.fd, function(x){
             sl.val <- sample.sl(x, distances)/30
             test.t <- zone.deer.t.leader.fd[x] %>% right(turning.to.fd[x]) %>% fd(sl.val[1])
@@ -477,19 +549,29 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
           zone.deer.t.leader.fd.upd <- zone.deer.t.leader.fd %>% right(movemat.fd[1,]) %>% fd(movemat.fd[2,])
         }
         
-        # Merge deer that moved towards HR center and feeders + movemat
-        if(N.fd > 0){
-          zone.deer.t.leader.sf <- rbind(turtles2sf(zone.deer.t.leader.hr.upd), turtles2sf(zone.deer.t.leader.fd.upd)) %>% arrange(who)
-          zone.deer.t.leader <- sf2turtles(zone.deer.t.leader.sf)
-          
-          movemat <- data.frame(who = zone.deer.t.leader.sf$who, dist = 0)
-          movemat[which.hr, "dist"] <- movemat.hr[2,]
-          movemat[which.fd, "dist"] <- movemat.fd[2,]
-        }else if(N.fd == 0){
-          zone.deer.t.leader <- zone.deer.t.leader.hr.upd
-          
-          movemat <- data.frame(who = zone.deer.t.leader.sf$who, dist = 0)
-          movemat$dist <- movemat.hr[2,]
+        # Merge only branches that actually ran during THIS zone/timestep.
+        # This handles all-HR, all-feeder, and mixed movement without stale objects.
+        moved_parts <- list()
+        if (N.hr > 0L) {
+          moved_parts[[length(moved_parts) + 1L]] <-
+            turtles2sf(zone.deer.t.leader.hr.upd)
+        }
+        if (N.fd > 0L) {
+          moved_parts[[length(moved_parts) + 1L]] <-
+            turtles2sf(zone.deer.t.leader.fd.upd)
+        }
+        zone.deer.t.leader.sf <- do.call(rbind, moved_parts) %>% arrange(who)
+        zone.deer.t.leader <- sf2turtles(zone.deer.t.leader.sf)
+        
+        # Associate each step length with its turtle ID before combining zones.
+        movemat <- data.frame(who = zone.deer.t.leader.sf$who, dist = 0)
+        if (N.hr > 0L) {
+          rows_hr <- match(zone.deer.t.leader.hr@.Data[, "who"], movemat$who)
+          movemat$dist[rows_hr] <- movemat.hr[2, ]
+        }
+        if (N.fd > 0L) {
+          rows_fd <- match(zone.deer.t.leader.fd@.Data[, "who"], movemat$who)
+          movemat$dist[rows_fd] <- movemat.fd[2, ]
         }
         
         assign(paste0("zone", ii, ".deer.t.leader"), zone.deer.t.leader)
@@ -530,7 +612,7 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
       # plot
       #plot(myworld, main = paste0("timestep = ", i)); points(deer.t, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
       #plot(myworld, main = paste0("timestep = ", i)); points(deer.t, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = t3$leaderYN %>% recode("0" = "white", "1" = "black"), lw = 2)
-  
+      
       # UPDATE PASSAGE WORLD =======================================================================================
       sldf1 <- data.frame(who = deer.t.leader.sf$who, sl = movemat[,"dist"])
       sldf2 <- data.frame(who = deer.t.follower.sf$who, sl = sl.follow)
@@ -574,41 +656,23 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
         ] + passage_counts$n
       }
       
-      # routedf = data.frame()
-      # for (j in 1:nrow(deer.t)) {
-      #   dist.taken <- sldf.both[j, "sl"] # a vector of SLs taken at this time step
-      #   
-      #   tt <- deer.t@.Data[j,] 
-      #   prevpatches <- tt[c("prevX", "prevY")] %>% as.matrix() %>% t() # extract previous patch coords
-      #   pass <- patchDistDir(myworld, prevpatches, dist = seq(0, dist.taken, 0.1), 
-      #                        angle = deer.t@.Data[j,"heading"]) %>% unique()
-      #   pass # identify all patches that animal has passed
-      #   
-      #   routedf <- rbind(routedf, pass)
-      # }
-      # 
-      # routedf <- routedf %>% na.omit()
-      # passage.loc <- routedf %>% group_by(pxcor, pycor) %>% unique() %>% as.data.frame()
-      # passage.n <- routedf %>% group_by(pxcor, pycor) %>% arrange(pxcor) %>% 
-      #   summarise(n=n(), .groups ="drop_last") %>% pull(n)
-      # 
-      # 
-      # passageworld[passage.loc[,1], passage.loc[,2]] <-  passageworld[passage.loc[,1], passage.loc[,2]] + passage.n
-    
-      cat(paste0(simN, "-", i, " "))
+      if (verbose) cat(paste0(simN, "-", i, " "))
     } # end of each time step
     
-    # plotting ---- # 
-    colfunc <- colorRampPalette(c("white", "darkgreen", "red"))
-    
-    plot(passageworld, col = colfunc(30), main = "Number of passages")
-    points(st_coordinates(feederloc.sf)[,"X"], st_coordinates(feederloc.sf)[,"Y"], 
-           pch = 8, lwd = 2, col = "yellow")
-    points(hr.center$xcor, hr.center$ycor, pch = 8, lwd = 2, col = "blue")
-    points(camloc.sf, pch = 1, lwd = 2)
-    # initial plot
-    plot(myworld, main = "timestep = 0 (initial)"); points(t4, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
-    # ------------- # 
+    if (plot_results) {
+      # plotting ---- # 
+      colfunc <- colorRampPalette(c("white", "darkgreen", "red"))
+      
+      plot(passageworld, col = colfunc(30), main = "Number of passages")
+      points(st_coordinates(feederloc.sf)[,"X"], st_coordinates(feederloc.sf)[,"Y"], 
+             pch = 8, lwd = 2, col = "yellow")
+      points(hr.center$xcor, hr.center$ycor, pch = 8, lwd = 2, col = "blue")
+      points(camloc.sf, pch = 1, lwd = 2)
+      # initial plot
+      plot(myworld, main = "timestep = 0 (initial)"); points(t4, pch = 23, col = t3$sex %>% recode("1" = "red", "2" = "blue"), bg = "white", lw = 2)
+      # ------------- # 
+      
+    }
     
     reslist[[simN]] <- passageworld
     
@@ -618,22 +682,57 @@ runABM <- function(t.end, select.feeder.prob.vec, totalNsimul = 5){
   return(reslist)
 }
 
-# Same deer initial population distribution
-res.control <- runABM(t.end, select.feeder.prob.vec = rep(0, 7), totalNsimul = 3) # control
-res.default <- runABM(t.end, select.feeder.prob.vec = c(0, 0.1, 0.2, 0.3, 0.2, 0.1, 0) , totalNsimul = 3) # deafult vector testing
-res.strong <- runABM(t.end, select.feeder.prob.vec = c(0, 0.3, 0.4, 0.5, 0.2, 0.1, 0) , totalNsimul = 3) # deafult vector testing
+# test simulation
+set.seed(123)
 
+res.test <- runABM_distance(
+  t.end = 200,        # one simulated day
+  p0 = 0.3,         # illustrative, not calibrated
+  d50 = 250,        # meters
+  totalNsimul = 1,
+  plot_results = TRUE,
+  verbose = T
+)
 
+# mapping
 colfunc <- colorRampPalette(c("white", "darkgreen", "red"))
-plot(res.control[[1]], col = colfunc(30))
-points(camloc.sf, pch = 1, lwd = 2)
+plot(res.test[[1]], col = colfunc(30))
+points(feederloc.sf, pch = 1, lwd = 2) # o -- feeder location
+points(camloc.sf, pch = 4, lwd = 2) # x -- cam location
 
-lapply(1:13, function(x) {
-  mean(
-    res.control[[1]][][which(cambuffworld[] == x)],
-    na.rm = TRUE
-  )
-})
+
+
+# explore fp function
+feeder_prob <- function(distance_m, p0, d50) {
+  p0 * 2^(-distance_m / d50)
+}
+
+curve(
+  feeder_prob(x, p0 = 0.3, d50 = 250),
+  from = 0, to = 3328, # max distworld value: 3327.964
+  ylim = c(0, 0.3),
+  xlab = "Home-range center to feeder (m)",
+  ylab = "Feeder-directed probability per 2-hour step",
+  col = "red", lwd = 2
+)
+
+curve(
+  feeder_prob(x, p0 = 0.3, d50 = 500),
+  add = TRUE, col = "blue", lwd = 2
+)
+
+curve(
+  feeder_prob(x, p0 = 0.3, d50 = 1000),
+  add = TRUE, col = "darkgreen", lwd = 2
+)
+
+legend(
+  "topright",
+  legend = c("d50 = 250 m", "d50 = 500 m", "d50 = 1000 m"),
+  col = c("red", "blue", "darkgreen"),
+  lwd = 2,
+  bty = "n"
+)
 
 
 
@@ -675,7 +774,4 @@ raster::writeRaster(
   format = "GTiff",
   overwrite = TRUE
 )
-
-
-
 
