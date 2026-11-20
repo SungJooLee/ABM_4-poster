@@ -1,0 +1,84 @@
+PAGE 1
+
+
+PAGE 2
+Table A.1: Entities and State variables with units and deﬁnitions
+Entity State variable(s) Description/Processes/Unit
+Global
+Variable
+hour Hour of the day 1-24
+day Day of the month 1-31
+month January-December
+year Year
+monthday 1-365, includes leap years
+ticktime model time step
+refmaxtemp List of mean maximum temperatures for each day
+refsdmaxtemp List of S.D of maximum temperatures for each day
+refmintemp List of minimum temperatures for each day
+refsdmintemp List of S.D. of minimum temperatures for each day
+Patches
+avgpreovi mean of past 17 day average temperature
+cumdegreeday Cumulative 7 day degree day
+degreeday Degree day (see Eq. (1))
+maxtemp Maximum temperature
+mintemp Minimum temperature
+movingdd Array of degree for past 7 days
+preovi Mean daily temperature
+preoviarr Array of preovi from past 17 days
+eggnum Number of eggs on patch
+translarvae Larvae in 3 week transitioning periods before starting to quest
+transtime Time larvae on patch has spent undergoing transitioning period
+translarvae? TRUE or FALSE, Are there transitioning larvae on patch?
+questlarvae Number of questing larva ( Ixodes agents) currently on patch
+questtime Time larvae spent questing [need to check function]
+questlarva? TRUE or FALSE, Are there questing larva on patch
+dormantlarvae Number of dormant larvae on patch
+dormanttime Times larva spent dormant on patch
+dormantlarvae? TRUE or FALSE, Are there dormant larva on patch
+larvaequestinga Number of larvae questing (but not actual Ixodes agents) on patch
+addlarvae Number of questing larva will become active larva
+Ixodesb
+Ahost host species fed on as nymph
+attach Identiﬁer of who the tick is attached to
+cumdegreedaythreshold Threshold below which tick will become dormant
+dormant? TRUE or FALSE, is the tick dormant/overwintering?
+dropped? TRUE or FALSE, have you dropped from host?
+droppoint Location once dropped from host? [x,y]
+feedtm Length of time feeding on host
+female? TRUE or FALSE, If adult, are you female?
+host Host species currently attached to, if any?
+larvaehost Host species fed on as larva
+lifespan Age of tick
+lifestage Current life stage of tick, ”larva”, ”nymph” or ”adult”
+molttm Length of time spent molting (hours)
+molttmthreshold Length of time needed to molt (hours
+nymphhost Host species fed on as nymph
+replete? TRUE or FALSE, did you ﬁnish your blood meal for this life stage
+preov Total time in ”preoviposition”status (hours)
+preovarr Total time spent in preoviposition status (hours)
+questrange Range in which ticks can attach to host
+status What is your status? ”dormant”,”feeding”, ”molting”, ”preoviposition”, ”questing”
+rangen c Random number assigned to each Ixodes for random processes
+Host
+adult-infestation number of larvae currently attached to host
+adultlist List of adult ticks attached to host
+adultthreshold Maximum of adults that can attach to host
+adultinfested? True or False. Is the host infested with adult ticks?
+hostbreed Type of host (e.g mice, deer)
+groom Hourly grooming rate of host
+homerange Agent set of patches that make up home range of host
+radiushomerange Radius of host home range
+larvalinfestation Number of larvae currently attached to host
+larvalthreshold Maximum number of larvae that can attach to host
+larvaelist List of larval ticks attached to host
+larvainfested? True or False. Is the host infested with larval ticks?
+mybase Centroid of home range [x,y]
+nymphinfested? True or False. Is the host infested with nymphal ticks?
+nymphalinfestation Number of larvae currently attached to host
+nymphalthreshold Maximum number of nymphs that can attach to host
+nymphlist List of nymphal ticks attached to host
+a Optimization of model speed required splitting I. scapularis larva between patch variables and agents to reduce the total
+number of processes actiing upon model agents upon thereby decreasing the time spend running models
+bIxodes scapularis ticks are referred to as Ixodes in models as ”tick” is a primitive in Netlogo software meaning time step.
+c Allows processes involving comparing to random number to happen to each individual agent separately
+17

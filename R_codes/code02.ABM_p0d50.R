@@ -96,6 +96,9 @@ inbuffer <- st_read("Connetquot_boundary-200.shp", crs = 32618)
 # ---------------------------------------------------------------------------------------------- #
 # [1] Create turtle groups randomly (The location is the HR center!) -------
 # ---------------------------------------------------------------------------------------------- #
+set.seed(123)
+
+
 {
   N <- 176 # the number of deer groups !
   greenpatch <- patches(initworld) %>% as_tibble() %>% 
@@ -683,8 +686,6 @@ runABM_distance <- function(t.end, p0, d50, totalNsimul = 5,
 }
 
 # test simulation
-set.seed(123)
-
 res.control <- runABM_distance(
   t.end = 200,
   p0 = 0, d50 = 500,
@@ -768,7 +769,7 @@ back2ras <- function(x){
 
 
 raster::writeRaster(
-  back2ras(res.control[[2]]),
+  back2ras(res.control[[2]]), ## outdated
   filename = "Results.prelim/passageworld.tif",
   format = "GTiff",
   overwrite = TRUE

@@ -1,0 +1,42 @@
+Halsey-style one-cell diagnostic: NOT a calibrated spatial tick forecast
+Climate input: D:/github/ABM_4-poster/Results.climate/halsey_weather_daily.csv
+Duration: 10 burn-in years + 3 analysis years
+Seed: 123
+Cell area (m2): 900
+Initial modeled ticks: 139
+Final modeled ticks: 64691
+Total eggs laid: 893041
+Population accounting error: 0
+First extinction simulation day: none
+Elapsed seconds: 152.62
+Beginning-of-analysis ticks (carried from burn-in): 75229
+Analysis-only population accounting error: 0
+Main daily/annual outputs and seasonal plots exclude burn-in; full-run files retain it.
+internal_date is a dummy Gregorian seasonal clock, not a forecast date.
+Burn-in and analysis form one continuous run; no population, timer, climate-history or RNG reset.
+Ten years of burn-in is a configured duration, not a demonstrated convergence criterion.
+Counts are integer stochastic cohorts, not expected fractional counts.
+A means reproductive female adults only; removed males are counted separately.
+Mice are a constant input. Feeding-on-mouse states describe ticks, not mice.
+Deer encounter opportunities are fixed; deer identities/transport come in the spatial step.
+Conditional hourly attachment probabilities are multiplied by provisional contact fractions.
+Reference densities/initial conditions are paper-based starting points, not local estimates.
+Initial overwintering questers start at stage age 0; early years include initialization effects.
+Feeding capacity = floor(fixed host abundance * per-host burden limit), by stage.
+Mortality and grooming use hourly Bernoulli trials within each two-hour interval.
+Transitions/new attachments occur at interval end; no same-interval transition cascades.
+Natural mortality applies before grooming; host slots free at detachment become usable next step.
+Winter dormancy pauses off-host development/preoviposition but not mortality or ongoing feeding.
+Autumn dormancy is latched until next calendar year; new nymphs also wait until next year.
+Larval hardening defaults to 21 days (supplement); main text says 7 days.
+No additional egg-development or engorged-nymph incubation duration was specified clearly.
+Adults can reproduce in warm autumn if gates/timers permit; no undocumented spring-only gate.
+Negative polynomial fecundity is clipped to 0; eggs per female are rounded to integers.
+Seven-day DD is a rolling sum; negative DD follows the printed equation in code03.
+All detachment/grooming survivors stay in the cell in this nonspatial diagnostic.
+Original NetLogo archive could not be retrieved; these timing choices need source-code review.
+Passing accounting/unit checks does not establish empirical phenology or abundance accuracy.
+Final-year questing peak L : analysis year 3 09-25 (count: 47259 )
+Final-year questing peak N : analysis year 3 05-12 (count: 2157 )
+Final-year questing peak A : analysis year 3 07-08 (count: 96 )
+Review seasonal peaks against field observations and source timing rules before spatial coupling.

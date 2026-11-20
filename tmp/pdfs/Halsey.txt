@@ -1,0 +1,1130 @@
+PAGE 1
+Contentslistsavailableat ScienceDirect
+EcologicalModelling
+journal homepage: www.elsevier.com/locate/ecolmodel
+Aspatialagent-basedmodelofthediseasevector Ixodesscapularis toexplore
+host-tickassociations
+SamniquekaJ.Halsey a,⁎,JamesR.Miller b
+aProgram in Ecology, Evolution and Conservation Biology, University of Illinois at Urbana-Champaign, Urbana, IL 61081, USA
+bDepartment of Natural Resources and Environmental, University of Illinois at Urbana-Champaign, Urbana, IL 61081, USA
+ARTICLEINFO
+Keywords:
+Black-leggedtick
+Individual-basedmodel
+Ixodes scapularis
+Tick-bornedisease
+ABSTRACT
+Tick-bornediseasesareincreasingworldwideandhaveaprogressivelynegativeimpactonhumanhealth.The
+black-leggedtick, Ixodes scapularis,istheknownvectorofseveralemergingtick-bornediseases.Toeffectively
+manage diseases requires enhanced knowledge of the interactions of the tick, its hosts, and the environment.
+Modelingapproachesmayofferawaytoevaluatevectorcontrolstrategiessinceitisimpossibletoconductlarge-
+scale experiments in natural settings. Therefore, we created the first spatially explicit individual-based tick
+interactionmodel(SEIB-TIM)thatisdesignedfromtheperspectiveoftheticktoexaminetheprocessesthrough
+which I. scapularispopulationsaremaintained.Usingatwo-hostwildlifecommunityconsistingofwhite-footed
+mice(Peromyscus leucopus)andwhite-taileddeer(Odocoileus virginianus),weparameterizedourmodelsothat I.
+scapularisinfestationratesfor P. leucopusarewithintherangeofthosereportedinfieldstudies.Onceourmodel
+(SEIB-TIM)accuratelysimulatedtheinteractionsbetween I. scapularis,wildlifehosts,andtheenvironment,we
+evaluated its robustness to parameter uncertainty using both global and local sensitivity analyses. Lastly, we
+relatedchangesinmodelparametersto I. scapularislife-historytraitstounderstandhowthosechangesaffected
+themaintenanceof I. scapularispopulations.Wefoundthatofthemodel parametersweexamined, increasing
+mousegroomingby10%reducedthetotalquestingnymphpopulationby30%intenyears.Inaddition,a10%
+reductionindeergroomingiscapableofreducingthequestinglarvaepopulationby36%andquestingnymph
+population by 35%. This result indicates that management interventions aimed at decreasing the number of
+larvalticksthatcansuccessfullyfeedonmiceinadditiontotargetingthereproductivestageofthetickslifecycle
+can potentially reduce tick populations. We therefore conclude that effective management efforts should be
+aimedatmultiplestagesinthetickslifecycleandenactedforthelongterm.Themaintenanceoftickpopulations
+can be better understood and controlling mechanisms identified when incorporating information on all com-
+ponentsoftheticklife-cycleintothemodel.ThisSEIB-TIMmodelservesasthefoundationforamorecomplex
+modelwithadditionalhostspeciesaswellastick-bornepathogens.
+1. Introduction
+Tick-borne diseases are increasing worldwide and have had a pro-
+gressivelynegativeimpactonhumanhealthoverthepastcentury(Gaff
+and Gross, 2007; Jones et al., 2008). The black-legged tick,Ixodes
+scapularis,istheknownvectorofseveralemergingtick-bornediseases,
+includinghumanbabesiosis,humananaplasmosis,Powassanvirusand
+Lymedisease(Spielmanetal.,1985;Schwartzetal.,1997;Piesmanand
+Eisen, 2008). To effectively manage the risk of contracting such dis-
+eases requires a better knowledge of the interactions of the tick, their
+environment and the wildlife host community upon which they feed.
+Thewildlifehostcommunityisessentialtothelifecycleof I. scapularis;
+therefore, previous management efforts have sought to reduce human
+disease risk through the culling of wildlife thought to maintainI. sca-
+pularis populations, namely white-tailed deer (Odocoileus virginianus)
+(Wilson et al., 1985). Reducing deer populations in the attempt to
+disrupt the reproduction stage of the ticks life cycle is ineffective be-
+causeadulttickscanobtainabloodmealfromotherwildlifehostsand
+eachfemaletickcanlaythousandsofeggs(Deblingeretal.,1993;Rand
+et al., 2003). More recently, small rodents such as white-footed mice
+(Peromyscus leucopus) are being targeted by researchers (e.g., tickpro-
+ject.org). Targeting small rodents has the potential to control tick po-
+pulationsbecausehostsforthejuvenilestageoftickscanbealimiting
+factor (Van Buskirk and Ostfeld, 1995; Kurtenbach et al., 2006). By
+understanding the factors that control interactions between wildlife
+host populations and the tick vector through novel strategies, we can
+https://doi.org/10.1016/j.ecolmodel.2018.09.005
+Received18April2018;Receivedinrevisedform27August2018;Accepted6September2018
+⁎ Corresponding author.
+E-mail address:shals3@illinois.edu(S.J.Halsey).
+Ecological Modelling 387 (2018) 96–106
+Available online 15 September 2018
+0304-3800/ © 2018 Elsevier B.V. All rights reserved.
+T
+i An update to this article is included at the end
+
+PAGE 2
+identify priorities for managing disease risk (Sandberg et al., 1992;
+PiesmanandEisen,2008).
+One such strategy involves modeling, which may be particularly
+useful especially since it is nearly impossible to perform large-scale
+experimental studies of different management scenarios in natural
+settings (Van Buskirk and Ostfeld, 1995; Caraco et al., 1998; Wood
+et al., 2014). Explicitly modeling the interactions between the vector
+andwildlifecommunity,anddecomposingtherelativecontributionsof
+parameter changes to model output can help us to understand the
+factors that allow tick populations to propagate (Caraco et al., 2002;
+DobsonandStuart,2016).However,previousmodelsforvector-borne
+diseases havetended to focus only on pathogen transmissionbetween
+vectorsandhostswhileignoringthepopulationdynamicsofthevector
+(Caracoetal.,2002).
+Mostmodelsthatinvestigatetickandhostpopulationdynamicsare
+state variable models, taking the form of differential equations (e.g.
+Ogden et al., 2005; Wu et al., 2010; Maliyoni et al., 2017), negative
+binomial (e.g.,Tran and Waller, 2015), matrix models (e.g.Mount
+et al., 1997; Dobson and Stuart, 2016) and cellular automata (e.g.
+Madhav et al., 2004). Yet these models are limited in their ability to
+identify key factors in the ticks life-cycle that influence population
+dynamics due to simplifying assumptions that reduce the number of
+processes in the model. These include reducing the number of stages
+representing thelife-cycle of the tick vector, characterizing individual
+tickbehaviorashomogeneousandignoringtheseasonalpatternsoftick
+abundance (Van Buskirk and Ostfeld, 1995; Deelman et al., 1996;
+Caracoetal.,2002).Alternatively,onecouldavoidtheseshortcomings
+by employing a bottom-up approach and individual-based modeling
+(IBM)(Grimm,1999).AnIBMapproachallowsonetoassignrulesre-
+garding the abiotic and biotic interactions between the ticks, wildlife
+hosts,andtheenvironmenttoobservehowtheyrelatetotheemergence
+of population dynamics (Lindsay et al., 1999). Several attempts using
+IBMshavebeenpromising,yet,computationalchallengesnecessitated
+a reduction in detail so that ticks were not represented as individuals
+and host movements were simplified which excludes fundamental
+processes involved in the tick life cycle such as attachment rates to
+hostsaswellashostgrooming(Wangetal.,2012,2016).
+To expand on previously developed IBMs, we designed a spatially
+explicitindividual-basedtickinteractionmodel(SEIB-TIM)thatvaries
+temperature (i.e. microclimate) across the environment, does not ag-
+gregateticks,useshourlytimestepsandincorporateslife-stagespecific
+attachmentrates.Webuiltourmodelforend-userswhomaynothavea
+lotofcodingandmodelingexperiencebuthaveaneedfor simulation
+experiments that can mimic the habitat and wildlife host community
+compositionuniquetotheirstudysite.Forbothsimplicityandeaseof
+use, we chose to utilize an open-source software package, Netlogo,
+whichhasauser-friendlyinterface(Wilensky,1999).Wedescribeour
+modelfollowingthewidely acceptedcomprehensivestandard method
+fordocumentationofIBMs(Grimmetal.,2010).
+Thescopeofourmodelwastoexaminetheprocessesthroughwhich
+twoprimaryhosts, P. leucopusand O. virginianus,maintain I. scapularis
+populations within a homogeneous northeast US forest. We evaluated
+thegeneralperformanceofthemodelregardingtickphenologybefore
+parameterizingthemodelbyensuringthat I. scapularisinfestationrates
+forP.leucopus werewithintherangeofthoseseeninthefield.Next,we
+inspectedthesensitivityofmodelparameterstoevaluatetherobustness
+ofourmodeltoparameteruncertainty.Finally,weexaminedchangesin
+parameters as they relate toI. scapularislife-history traits to identify
+important aspects of the ticks life cycle that may influence the main-
+tenanceof I. scapularispopulations.
+2. Modeling description
+Thespatiallyexplicitindividual-basedtickinteractionmodel(SEIB-
+TIM) (Halsey and Miller, 2018), operates at the scale of the tick,I.
+scapularisanditsinteractionswiththetemperatureofthesurrounding
+environmentaswellasthewildlifehoststhroughwhichitobtainsblood
+meals(Fig.1).
+2.1. Purpose
+ThepurposeoftheSEIB-TIMistounderstandtherelationshipsbe-
+tween I. scapularis, its hosts, and the environment. We do this by si-
+mulating these relationships in a way that is spatially and temporally
+Fig. 1.Conceptualmodelrepresentingthelife-cycleoftheblack-leggedtick Ixodes scapularis,andits’interactionwithwildlifehosts.Tickdevelopmentisregulated
+bytemperature.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+97
+
+PAGE 3
+realistic to the patterns of tick burdens observed in field studies. In
+doingso,weidentifyhowchangesinattachmentandmoltingratesof
+the three life stages ofI. scapularisas well as host grooming rates in-
+fluencequestingtickdensity.
+2.2. Entities, state variables, and scale
+The entities of the SEIB-TIM areIxodes tick agents (representing
+larval,nymphal,andadult I. scapularis),smallmammals(representing
+P. leucopus), large mammals (representingO. virginianus) and patches
+(representing forest habitat). The state variables for all entities are
+defined in Table A.1. The SEIB-TIM is composed of an one hectare
+homogeneousforesthabitat,arrangedona100×100squaregrid,with
+individual patches measuring 1m2, the scale at which ticks interact
+withtheirenvironment.ThetimestepoftheSEIB-TIMis1h.
+2.3. Processes and scheduling
+The SEIB-TIM is constructed to match the ecology ofI. scapularis.
+We divided our model into sub-models that correspond with different
+behaviorsofthetickaswellaswildlifehostmovements.Thefollowing
+sub-models are executed once per time step in the given order re-
+presentingthelogicalorderofthelifespanofthetick:pulltemp,dor-
+mancy, development, reproduction, questing, and feeding (see sub-
+model sections for details). The last sub-model: Host Movement (see
+Section2.9.7),alsooccursoncepertimestepandactsindependentlyof
+theothersub-models.Theorderinwhichindividualagentsandpatches
+execute a process is always randomized with state variables updated
+immediatelyaftereachoperation(Fig.2).
+2.4. I. scapularis life-cycle
+Ixodes scapularishas a two-year life-cycle which depends on blood
+mealsfromwildlifehostsfornutritiontotransitionthrougheachofits
+post-embryonic stages (larva, nymph, and adult) (Fish, 1993). In the
+spring,adultfemaletickslayupto3000eggs,whichhatchintolarvae
+inmid-summerandaftersuccessfullyobtainingabloodmeal,moltinto
+nymphsbeforeoverwinteringandquesting(i.e.,searchingforhoststo
+feed on) the following year (Platt et al., 1992). After nymphs obtain
+their blood meal, theymolt into adults in the fall, at which time they
+obtainanotherbloodmealandmate,restartingthecyclethefollowing
+year.
+2.5. Design concepts
+2.5.1. Emergence
+Totalnumbersof Ixodesquestingandfeedingonanygivenhostat
+anygiventimeemergefromthecombinedbehaviorsoftheagents(ticks
+andhosts)inresponsetotheenvironment(e.g.,temperature).
+2.5.2. Sensing
+Ixodestickagentscansensewhenanappropriatehostiswithinone
+meter squareof theirlocation. Larvaeandnymphsonlyfeed onsmall
+mammals(i.e.,mice),whereasadultticksonlyfeedonlargemammals
+(i.e.,deer)(TälleklintandJaenson,1994;DobsonandRandolph,2011).
+Ticks are also able to sense temperature, which influences tick devel-
+opment as indicated by ambient temperature (Branagan, 1973) calcu-
+latedbydegreedays(Eq. (1),McMasterandWilhelm,1997).
+= +° ° °T C T C CDegree Day 2 6minimum maximum
+(1)
+2.5.3. Interaction
+InteractionsintheSEIB-TIMarerestrictedtotick-hostandtick-en-
+vironment.
+2.5.4. Stochasticity
+Daily temperature is calculated using a mean and standard devia-
+tionoftemperaturefortheday,thereforestochasticityisinherentinthe
+temperature-dependent actions of the model such as tick questing be-
+haviorandmolting.
+2.5.5. Observation
+Ateachtimestep,thefollowinginformationwillbestoredforeach
+tick life stage (larvae, nymphs, adults): total number of ticks, host-
+specific tick infestation of each life stage. To determine the threshold
+for which we could consider the simulatedI. scapularispopulation as
+representative of an established population, we analyzed data onI.
+scapularisinfestationprevalence(i.e.proportionofhostsinfested)and
+intensity(i.e.averagenumber ofticks)fromdata collectedontickin-
+festationratesoverthepastfortyyears(Halseyetal.,2018).Weuseda
+MannWhitneyUnon-parametrictestofgroupdifferencestodetermine
+whether there were differences in the prevalence and intensity of in-
+festationof I. scapularisonwhite-footedmiceandwhite-taileddeerin
+recently invaded and established counties. We created five groupings
+(E0,E1,E2,E3,E4,E5),wherewecategorizedeachdatapointasrecently
+invadedorestablishedbasedonthetimesince I.scapularis wasreported
+in the county. For each grouping (EX, X is the cutoff for “years since
+reported” classified as “recently invaded,” with the remaining later
+yearsclassifiedas“established”.
+2.6. Initial assumptions
+We made several assumptions in the SEIB-TIM based on our un-
+derstanding of the important aspects ofI. scapularislife cycle. Larvae
+and nymphs are assumed only to attach to mice whereas adults only
+attach to deer (Dobson and Randolph, 2011; Tälleklint and Jaenson,
+1994). Ticks are only able to molt if they feed to completion (i.e., no
+partial feedings). However, we assume that 20% of ticks that are
+groomedoffsurvivetoresumequestingandfeedagain(Cadenasetal.,
+2007).Inourmodel,onlytemperatureinfluencesdevelopmenttimesof
+I. scapularis(RandolphandStorey,1999;Ogdenetal.,2005;Leighton
+et al., 2012).I. scapularisis known to be sensitive to environmental
+conditions, including temperature, precipitation and humidity
+(Schauberetal.,2005;Killileaetal.,2008;Ogdenetal.,2006;Ostfeld,
+2009;Dhingraetal.,2013).However,thescopeofourmodelisnotto
+determine how weather variables influence tick populations. Rather,
+we use temperature as a proxy to simulate tick development to un-
+derstandhowdifferentaspectsoftheticklifecyclerelatetopopulation
+maintenance.
+Inourmodel,wehaveaonehectarehomogenousforesthabitat,and
+due to the small study area we do not assume edge effects (Horobik
+et al., 2006). We chose to simulate a small study area due to only
+having a two-host community. This one hectare habitat size more ac-
+curately represents the host community composition, whereas larger
+habitats necessitates the inclusion other species that can serve as
+wildlife hosts (Stafford and Magnarelli, 1993; Allan et al., 2003;
+Brownstein et al., 2005). In addition, to isolate the aspects of thetick
+life cycle, we chose to model only forest habitat which has both the
+highestrateofticksurvivalandismostlikelytocontributetodisease
+risk.
+Similarto Wanget al.(2012),weassumethat wildlifehostsmove
+withinasethomerange,whichisnotdependentontheotherhosts(i.e.,
+no territoriality or behavior avoidance). Wildlife hosts move once per
+timestepandarenotlimitedbythedistancethattheycanmovewithin
+theirhomerange.Thisresultsinwildlifehostonlybeingabletomove
+24 times a day, a simplification and possible under-representation of
+the movements within their activity range and potential contact with
+questingticks(Wangetal.,2012).
+All host populations are assumed to be at stable equilibria. Host
+density remains constant with no births, deaths, immigration or emi-
+gration happening within the habitat. We do not incorporate sex
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+98
+
+PAGE 4
+differences among wildlife hosts regarding infestation rates (but see
+Ostfeldetal.,1998;Hameretal.,2012).Wealsoassumethatgrooming
+efficacy (i.e., the rate at which host remove ticks from their body) is
+independent of sexand age of the host. We chose not to explicitlyin-
+cludedensitydependentmortalityintheformofaseparateparameter,
+insteadusingbothgroomingrateandattachmentrateasaproxy.Mice
+arethoughttobeincapableofsuccessfullygroomingoffattachedticks
+(Levin and Fish, 1998), and tick infestation level does not appear to
+affect the proportion of ticks that feed to completion (Hazler and
+Ostfeld, 1995). However, we do constrain the maximum number of
+Fig.2. Conceptualdiagramoftheprocessesandscheduleforthespatiallyexplicittickinteractionmodel.(A)Overviewoftickinteractionmodel.(B)Dormancysub-
+model.(C)Developmentsub-model.(D)Feedingsub-model.(E)Reproductionsub-model.Symbolsrepresentthetypesofactions/stepsinthemodel:diamond–a
+decisionthatmustbeundertakenbasedontheanswertoaquestion,trapezoiduserispromptedforinformationthatmustbemanuallyinputintoasystem,isosceles
+trapezoid–aoperationthehumanusermustperform,halfcylinder–datastoredinmodelwithinanarrayorcalculatedvalues,rectangle–process/action,rounded
+rectangle–stoppointinaprocess.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+99
+
+PAGE 5
+juveniletickspersmallmammalto50larvaeornymphsperhost(Van
+Buskirk and Ostfeld, 1995; Caraco et al., 1998) We initially sought to
+constrain the number of adult ticks to 100 (Dobson and Randolph,
+2011),howeverinourmodel,adultinfestationneverreachedabove30
+ticksperdeer.
+2.7. Initialization
+TheSEIB-TIMinitiatesonJanuary1,atimewhennymphsandadult
+ticks aredormant andoverwintering (Plattetal.,1992).Initialmodel
+settingsare50smallmammals,2deerandisbasedondensitydata(per
+ha) (LoGiudice et al., 2008; Quality Deer Management Association,
+2017) as well as 1500 overwintered nymphs, 50 overwintered adults
+basedonthemeannumberoffeedingnumberofticksperhostusually
+foundoneachspecies(Halseyetal.,2018).Thejustificationforstarting
+themodelwithtwolifestages(larvaeandnymphs)istosimulatetwo
+cohortsof I. scapularisasfrequentlyobservedinthewild(Fish,1993).
+Hostsarerandomlydistributedthroughouttheenvironment.
+2.8. Input data
+The inputs are the mean and standard deviation of daily tempera-
+turefortheperiod2010–2015forConnecticut,US,akeyfocalareaof I.
+scapularis, as downloaded from the National Climatic Data Center
+(NationalOceanicandAtmosphericAdministration,2015).
+2.9. Sub-models
+Allmodelparametersarelistedin Table1.
+2.9.1. Pull-temp
+This sub-model operates only on patch entities. For each square-
+meterpatch,athour1ofeachday,thesub-modelwillusethemeanand
+standarddeviationofthemaximumandminimumtemperatureforthe
+correspondingdaytocalculatethedegreeday(Eq. (1)).Thedegree-day
+will be added to the patch state variablemovingdd, where thecmdd
+(cumulative degree day) holds the degree-day for the last seven days.
+Thissub-modelalsoinsertsthedegreedayintothepatchstatevariable
+preovarrarray, an array thatcontains the average temperature for the
+last17days.
+2.9.2. Dormanct
+Thetwo-yearlifecycleof I.scapularis requiresaperiodofdormancy
+over the winter (Fig. 2B). The procedure OVER-WINTER changes the
+status to “dormant” for allIxodes agents once the mean cumulative
+degree day (cmdd) falls below 58 after the month of August (Mount
+et al., 1997). The procedure AWAKEN-ADULTS, AWAKEN-NYMPHS
+andAWAKEN-LARVAchangesthestatusof Ixodestoquesting,oncethe
+mean cmddincreases to thethreshold of 28 for adults,58 for nymphs
+and110forlarvae.
+2.9.3. Development
+Thissub-modeloperatesonthe Ixodestickagents,whichrepresent I.
+scapularis(Fig.2C).Each Ixodesagentisdefinedaseitheroneofthree
+lifestages:“larva,”“nymph”or“adult.”Thefirstprocedureofthissub-
+model, EGGS-TO-LARVAE createsIxodes with the “larva” life stage
+basedonthenumberofeggsonaparticularpatch.Eggsarerepresented
+byapatchvariable eggnumthatkeepstrackofthenumberofeggsthat
+werelaidonthatpatch.
+The second procedure, HARDEN-CUTICLE, represents the molting
+period from one life stage to the next, one week for “larva” and
+“nymphs” and two weeks for “adults” (Mount et al., 1997). The next
+procedure,START-QUESTING,asksthe Ixodestochangetheirstatusto
+“questing.”ThelarvathenenterstheQuestingsub-model(seeSection
+2.9.5). Completion of a blood meal activates the procedure LARVAE-
+TO-NYMPH to transition replete (i.e., fed)Ixodes from the life stage
+“larva” into the life stage “nymph” based on the larva molting prob-
+ability(Table1).Newlyformed Ixodesagentswiththe“nymph”status
+undergo a period of dormancy until the meancmdd reaches the ac-
+ceptablethresholdforthemtocontinuetheirlifecycleinthefollowing
+year.
+INCUBATE-NYMPHS is a procedure representing the incubation
+periodbeforerepletenymphstransitiontotheadultlifestage.Thenext
+procedure, NYMPH-TO-ADULT uses the nymph molting probability to
+determinethelikelihoodthatnymphs becomeadultticksandin com-
+binationwithprocedureSEX-RATIOassignsthesexofthe Ixodes,based
+ona50/50probability.Any Ixodesthatareassignedtothemalecate-
+gorydies.
+All Ixodes agents and the patch variableeggnum have a rate of
+mortalitybasedonthenumberofweekstheyhavebeenintheircurrent
+life stage and whether or not they are fed which is enacted by the
+procedure,NATURALLY-DIE(Table1).
+2.9.4. Reproduction
+Once femaleIxodes agents consume a blood meal and the mean
+cmddreaches28,thefemalebeginsapreovipositionperiodwheretheir
+statusbecomes“preoviposition”indicatingthattherearegettingready
+to lay eggs (Fig. 2E). The number of eggs laid is dependent on the
+temperature for the past 17 days, tracked by the patches in the pull-
+tempsub-model(seeSection 2.9.1).Once17dayshavepassedsincethe
+adult female has started the preoviposition period, the procedure FE-
+MALE-ADULT-REPRODUCE will be activated, calculating the number
+ofeggstheindividualfemalewilllaybeforedying(Table1).
+Table 1
+Modelparameterswithcitationsfromliterature.
+Parameters Constantorequation Citation
+Fecundity(eggsper
+female)
+−24.6*T 2+836*T−
+4106
+Mountetal.(1997)
+Eggmortalityrate 0.00003017683/h Mountetal.(1997)
+Egghatchtolarvae 110degreedays a Mountetal.(1997)
+LarvaetoNymph 58degreedays Mountetal.(1997)
+NymphtoAdult 81degreedays Mountetal.(1997)
+Femaleadulttopre-
+oviposition
+28degreedays Mountetal.(1997)
+Feedtime
+Larvae 3days Davidaretal.(1989)
+Nymphs 5days Davidaretal.(1989)
+Adults 10days Davidaretal.(1989)
+Unfedtickdeathrateinforesthabitat
+Tickage < 40weeks
+Larvae 0.000213472/h Mountetal.(1997)
+Nymphs 0.000003159/h Mountetal.(1997)
+Adults 0.000000183/h Mountetal.(1997)
+Tickage > 40weeks
+Larvae 0.000517143/h Mountetal.(1997)
+Nymphs 0.000363855/h Mountetal.(1997)
+Adults 0.000360880/h Mountetal.(1997)
+Repleteticksdeathrateinforesthabitat
+Larvae 0.0001317776/h Mountetal.(1997)
+Nymphs 0.0000958566/h Mountetal.(1997)
+Adults 0.0000912404/h Mountetal.(1997)
+Probabilityofattachingtohost
+Larvae 0.103726853/h Parameterizedvalue
+Nymphs 0.16788807/h Parameterizedvalue
+Adults 0.011786875/h Parameterizedvalue
+Moltingsuccess
+Larvae 0.415 LoGiudiceetal.(2003)
+Nymph 0.276 Parameterizedvalue
+Groomingrate
+White-footedmouse 0.00734/h Keesingetal.(2009)
+White-taileddeer 0.00495/h Parameterizedvalue
+Groomingsurvival 0.2 Cadenasetal.(2007)
+a Degreedaysisamethodofmeasurementforinsectdevelopmentwherefor
+aspecificlengthoftime,forthiscase7days.RefertoSection2.5.2.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+100
+
+PAGE 6
+2.9.5. Questing
+The next procedure, START-QUESTING, asks theIxodes to change
+theirstatusto“questing,”fromthispointtheycanattachtoanywildlife
+hoststhatcomewithinaonemeterradiusoftheirposition.
+2.9.6. Feed
+This sub-model represents the process ofI. scapularis feeding on
+wildlifehosts(Fig.2D).TheFEED-IXODESprocedureasks Ixodesagents
+of any stage if their stage is “questing” and whether a wildlife host is
+within a meter radius of their position. Depending on if the tick is a
+juvenileoranadult,thetickwillattempttoattachtothehostbasedon
+its corresponding attachment rate (Table 1). The next procedure DE-
+TACH-IXODESremovesthe Ixodesagentfromahostoncetheagenthas
+been attached to and feeding from a host for the specified amount of
+feeding time (Table 1). Detachment involves updating the location of
+the Ixodes agent to that of the attached wildlife host and setting the
+state variablereplete to “true”. The GROOMING procedure uses the
+groomingratesofwildlifehosttoremovefeeding Ixodesagents.Ofthe
+Ixodesagentsthataregroomedoff,80%diewiththeother20%ableto
+resumequesting(Cadenasetal.,2007).
+2.9.7. Host movement
+Thissub-modelrepresentsthemovementsofthewildlifehosts(mice
+and deer) throughout the habitat. Using data on the minimum and
+maximumhomerangesformiceanddeer,0.05–0.07haand216–345
+ha respectively (Wolff, 1985; Dechen Quinn et al., 2013), with home-
+rangesforeachindividualrandomlychosenbetweenthosevalues.Each
+individualisallowedtorandomlymoveoncepertime-stepwithintheir
+homerange.Ifanagentreachestheedgeofitshomerange,itwillface
+backtowardsthecenterofitshomerange.
+2.10. Parameter estimation
+Therearefiveunknownmodelparametersthathavethepotentialto
+influence the number of ticks on hosts: life-stage specific tick attach-
+mentrate(larvae,nymph,adult),andnymphmoltingprobability(i.e.,
+thesuccessofnymphmoltingintoadults)anddeergrooming(i.e.,the
+rate in whichO. virginianusremoves feeding adult ticks). To estimate
+modelparameters,weutilizedthe nlexperimentRpackagetodetermine
+the best parameter set via the evolutionary algorithm (EA) (Thiele
+etal.,2014).Evolutionaryalgorithmsuseevolutionarystrategiessuch
+asselectionandmutationontheparameterstofindwhichcombination
+ofparametersbestmeetsthedefinedcriteria.
+We chose to use categorical calibration where the criterion is a
+rangeofplausiblevaluesratherthanasinglemeanvaluetoaccountfor
+the heterogeneity in the distribution of ticks on hosts (Davidar et al.,
+1989).Thefittingcriteriausedwasbasedondatafromtheliteratureon
+larvae and adult tick infestation for each wildlife host species (e.g.
+mice,deer; Halseyetal.,2018).Weassumethatiflarvalandadulttick
+infestation intensity are within normal ranges, nymph infestation will
+follow suit. Using a cost function approach, the parameter estimates
+that best reproduce the observed tick infestation intensity will be
+chosen, identified by having the lowest cost value. Cost values are
+calculatedforeachparameterestimatebycomparingsimulationresults
+within the defined acceptable range, using mean square error (Thiele
+etal.,2014).
+To begin calibration, the EA starts with 20 randomly chosen com-
+binations of the 5 model parameters, effectively creating 20 “model
+populations.” We sampled the entire parameter range for four of the
+fiveparameters,andapartialspacefordeergrooming(0–0.10),asdeer
+groomingattherateof10%perhourresultedinmorethan99%ofticks
+survivinggroomingpressuresforthe10-dayfeedingtimeneededfor I.
+scapularis. A simulation run consists of running those 20 models po-
+pulations with the output of mean larval infestation compared to the
+referenceof0–43.2larvapermouse(Halseyetal.,2018).Usingthetwo
+“best” populations (elitism=2) where the model output met
+calibration criteria fell and incorporating a mutation rate of 16.67%,
+theEAcreatesasubsequentgenerationof20newpopulations.Weran
+the EA for 20 generations, resulting in 400 total model combinations,
+with10repetitionseach.Thegoalwastosampletheentireparameter
+space,withahighenoughmutationfrequencytopreventtheEAfrom
+fixatinginastatespace,butnotsohighthatthemodelneverconverges
+on a single value. Successful parameterization includes reaching an
+equilibriuminthecostvaluewheresubsequentgenerationsdonotre-
+sultinabettermodelfit(Fig.A.1)andsearchingtheentireparameter
+spaceforeachparameter(Figs.A.2–A.5).
+2.11. Sensitivity analysis
+To assess the sensitivity of model outcomes (i.e., host infestation
+rates, density of questing ticks) to variation in each parameter, we
+utilized two methods: Global sensitivity and local sensitivity analyses
+(Saltellietal.,2000;Borgonovoetal.,2003;Ginotetal.,2006).Global
+sensitivity analyses assess input variables over the full range of their
+possiblevalueswhereaslocalanalysesvariesmodelparametersovera
+small percentage one at a time around a central default value
+(Beaudouinetal.,2008).Usingthe nlexperimentRpackage,weusedthe
+Fourieramplitudesensitivitytest(FAST),avariancebasedglobalsen-
+sitivityanalysisbasedontheFouriertransformationsamplingdesignto
+measure thestrength of the contribution of uncertain inputson larval
+infestationrates(Cukieretal.,1973).Thismethodreturnsafirst-order
+sensitivity index (Si) or “main effect” where values closest to one in-
+dicatealargerinfluenceofmodeloutput.Thismethodisthebestchoice
+for computationallyexpensive modelsbecause itis moreefficient and
+requires fewer runs as compared to other global sensitivity methods
+(e.g.,Sobol, Reusseretal.,2011).
+To identify the likely consequences of management efforts that
+target specific stages in the life cycle, we assessed how changes in
+parameter values for tick attachment, grooming and molting rates in-
+fluencequestingtickdensity.Weusedtheone-at-a-time(OAT)method
+to performlocal sensitivityanalyseswhereweincrease/decrease each
+of the eight parameters by 10% to determine if any particular para-
+meterwasmoreinfluentialinrelationtotheproportionalchangeonthe
+densityofquestingticksateachlifestage.
+3. Results
+Becausewefoundthatthereisathresholdbetweenthesecondand
+thirdyearintheprevalence(Table2),wediscardedthedatafromthe
+firsttwoyearsofourmodelsandfocusedonlyontheresultsfromthe
+last ten years of the model. There was no significant difference in in-
+tensityofinfestationonwhite-taileddeerthroughouttheyears.Dueto
+no records of larval tick prevalence on white-footed mice in the first
+two years of the invasion time line we areunable to identify whether
+thereisathresholdfortheprevalenceoflarvawithinthefirsttwoyears
+of I. scapularisreporting. However, the intensity of larval infestation
+variedsignificantlybetweentheyears.
+3.1. Phenology
+The SEIB-TIM followed the seasonality forI. scapularis in the
+northeasternUnitedStates(Fig.3).Witheachyear,thenumberofticks
+feeding on wildlife hosts increased with phenological patterns of
+nymphsappearingbeforelarvaeremainingconstantacrossyears.Adult
+I. scapularisthatfailedtofindahostinthepreviousyearemergefrom
+dormancyandstarttofeedmid-April,withthiscohortsurvivingtofeed
+until early June. Nymphs start feeding on wildlife hosts in early May,
+peaking in late May to early June and tapering off in early August.
+Larval I. scapularis start to emerge in mid-July, with the majority
+feeding in early August and peaking mid to late August, and the last
+larvae feeding mid-October. AdultI. scapularisbegin feeding mid-Au-
+gust,peakingmid-Octoberandendingmid-November.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+101
+
+PAGE 7
+3.2. Sensitivity analysis
+3.2.1. Fourier amplitude sensitivity test
+We found that model output is most sensitive to uncertainty in
+nymphmoltingrates,deergroomingandgroomingsurvivalforlarvae
+and nymph infestation (Fig. 4a, b). However, for adult infestation of
+deer, the top ranking parameter influencing model output was deer
+groomingratesinfluencesmodeloutput(Fig.4c).
+3.2.2. One-at-a-time
+Total number of questing ticks increased with time; however, re-
+ductionsorincreasesinparametervaluesresultinanalogouschangesin
+tick populations (Table 3). A 10% increase in mice grooming reduces
+larvalticksalmostimmediatelyby20%ormore;however,thisdecline
+isnotnoticeabletenyearsfollowingestablishment.Incontrast,a10%
+decrease in micegrooming correspondsto a45% increase in questing
+larval ticks by year 10. This same pattern holds true for questing
+nymphs and adults. Changes in deer grooming has a more dramatic
+effectonquestingtickpopulations.A10%reductionindeergrooming
+can increase the number of larval questing ticks in year 10 by almost
+50%andquestingnymphsby40%inyear5and60%inyear10.The
+effect of increasing deer grooming is not as effective but still reduces
+larvalandnymphalquestingpopulationbyapproximately30%.
+Relative changes into grooming survival and larvae molting prob-
+ablyseemtohavelittleeffectonquestingticks.Increasesinlarvalat-
+tachment rates have the potential to increase the number of questing
+adults in year one but this effect disappears by years five and ten.
+Changes in nymph attachment does not influence the questing popu-
+lation of either life stage, However, increasing adult attachment rates
+can result in a 42% increase in larval questing ticks by year 10, and
+steadyincreasesinnymphquestingfromyears1to10.
+4. Discussion
+4.1. Life-stage specific management actions
+Modelingvector-bornediseaseswithadualfocusonboththevector
+andhostpopulationscanidentifyprioritiesforempiricalresearchand
+mayofferamechanismforevaluatingcontrolpolicies(Sandbergetal.,
+1992;VanBuskirkandOstfeld,1995).Thispaperdescribesthefirst I.
+scapularis IBM where both the tick vector and wildlife hosts are re-
+presented as individual agents. By explicitly representing the interac-
+tionsbetweenthevariousticklifestagesandwildlifehosts,ourmodel
+reveals the significance of host grooming, tick molting and tick at-
+tachment rates to the maintenance of tick populations with regard to
+changes in model parameters that are specific to the ticks life cycle
+(Caracoetal.,1998).
+Global sensitivity analyses allowed us to detect both main and in-
+teraction effects of parameter variation in output. We performed this
+analysisonlyontheparametersforwhichwewereuncertainaboutthe
+value and subsequently parameterized via calibration. To do this, we
+examinedthefullrangeofvaluestodeterminehowrobustourmodelis
+to parameter uncertainty and found that grooming survival, nymph
+moltinganddeergroomingwerethemostinfluentialparameters.This
+suggests that the conclusions developed from our model output are
+dependentontheaccuracyofthesethreevalues.Werecommendfuture
+research to assess adult tick survival with regard to deer grooming
+behaviorsandnymph-to-adultmoltingrates.
+We also performed local sensitivity analysis by varying parameter
+values using the one-at-a-time (OAT) method to isolate effects from
+each parameter corresponding to a ticks life stage. In the case of this
+model,ourOATresultsidentifiedfouroftheeightparametersinwhich
+changesinvalueresultedinadisproportionatechangeinmodeloutput.
+Becausewerestrictedourlocalsensitivityanalysistoaparameterrange
+Table 2
+Mann–Whitney test of non-parametric test of group differences for the prevalence and intensity of larvae on white-footed mice and adults on white-tailed deer.
+Significantvaluesareinbold.Dashindicatesthatnodata.
+Speciesspecificinfestation Recentlyinvadedversusestablished
+E0 E1 E2 E3 E4 E5
+W p W p W p W p W p W p
+Prevalence
+White-FootedMouse – – – – 230.5 0.497 486.5 0.1134 332.5 0.192 249.5 0.852
+White-TailedDeer 5309 0.149 7465 0.117 7987.5 0.036 6200.5 0.155 4888 0.913 3516 0.174
+Intensity
+White-FootedMouse 2707 0.717 3280.6 0.036 3595 0.004 3940.5 0.030 3618.5 0.007 3840 0.346
+White-TailedDeer 1870 0.115 3259 0.507 2767.5 0.564 2482.5 0.5738 1859 0.912 1185 0.288
+Fig. 3.Phenologyoffeeding Ixodes scapularisfromthespatialexplicitindividualbasedtickinteractionmodel(TSEIB-TIM)foryears1,5and10afterestablishment
+usingafiveyearaverage(2010–2015)dailytemperatureforConnecticut,USasdownloadedfromtheNationalClimaticDataCenter.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+102
+
+PAGE 8
+of 10% above or below the default value, our results are limited to
+examining whether any specific parameter resulted in a dispropor-
+tionatechangeinmodelresults.Itishighlylikelythatlargerchangesin
+these parameters could result in greater differences in the numbers of
+questing ticks. These parameters included mice grooming, deer
+grooming, nymph molting probability and adult attachment rates.
+However,formanyoftheseparameters,ittakesapproximatelyfiveto
+tenyearsforchangestomanifestandtheyonlyimpactspecificticklife
+stages. For example, only in year ten, did a reduction mice grooming
+ratesby10%resultina30%decreaseofquestingnymphs.Asquesting
+nymphs are recognized as the greatest threat to human disease risk
+(Mather et al., 1996), management actions that take ten years to
+manifest may not seem like the best option. However, reducing the
+success of feeding juvenile ticks through management interventions
+suchastargeteduseofinsecticidesonwildlifehostsmayprovefruitful
+(Ostfeldetal.,2006;Staffordetal.,2017),especiallyifeffortsresultin
+morethana10%decreaseintickssuccessfullyfeedingonmice.
+In contrast, previous modeling studies recommended targetingO.
+virginianus, which is known as the reproductive host forI. scapularis,
+andemphasizedtheimportanceofdeerabundanceinthemaintenance
+of tick populations (Deblinger et al., 1993; Van Buskirk and Ostfeld,
+1995; Mount et al., 1997). However, experimental manipulations tar-
+getingdeerhavebeenineffectiveatcontrolling I. scapularispopulations
+(Deblinger et al., 1993; Duffy et al., 1994; Wilson, 1994), showcasing
+theweakroleofdeerinthemaintenanceofjuveniletickpopulations.In
+ourmodel,reducingthenumberofadultticksabletosuccessfullyfeed
+on deer took 10 years to result in an approximate 36% reduction in
+larvalquestingticks,and30–35%declineinquestingnymphticks.We
+foundoneinterestingcaseforwhichweareunabletoexplain,wherea
+decrease in the number of nymphs that successively molt into adults
+resultedina48%increaseinthenumberofquestingnymphsinthefirst
+year,butthiseffectdisappearsinsubsequentyears.Thissamedecrease
+inmoltingprobabilityalsoresultedina35%declineinthenumberof
+questingadultticks.Itisimportanttonotethatinourmodel,therewas
+a general trend toward larger tick populations with each successive
+year, meaning that while it may not seem like management actions
+targeting the ticks life cycle are effective at reducing absolute tick
+numbers, comparing these changes to the default model parameters,
+emphasizestheirvalueinmaintainingtickpopulations.
+All models make simplifying assumptions and the assumptions we
+makeinourmodelhaveseveralimplicationsfortheresults.Becausewe
+restrictattachmentoflarvaeandnymphstoonlymice,itispossiblethat
+weareunderestimatingtickabundanceaslarvaedoalsofeedondeer
+(Bosleretal.,1984).Howeverbecauseourstudyareaissmall,having
+larvae feedon deercouldinflate populationsize.In addition,because
+thepresenceof I. scapularisismoststronglycorrelatedwithforestha-
+bitat,werestrictthefocusofourmodeltoforesthabitat.Althoughticks
+cansurviveinthegrassymeadowsandtheecotoneregionbetweenthe
+two, forest habitat has the highest rate of tick survival (Mount et al.,
+1997).Further,webelievethattherelationshipbetweenchangesinthe
+tickslifecycleandtickabundancewillremainthesameinotherhabitat
+types.
+4.2. Model utility
+Our motivation for building the SEIB-TIM was two-fold. First, we
+soughtto develop amodel thathas thepotential to becomeatoolfor
+epidemiologists,enablingthemtoconductsimulationexperimentsthat
+mimic the habitat and wildlife host community composition that is
+unique totheirstudysite(Grimm,1999).Tomakethistooleasilyac-
+cessible,weusedanopen-sourceprogramwithauser-friendlyinterface
+ratherthanaproprietaryprogramwhereinteractionsoccurinablack
+box. In addition to being user-friendly, we were able to design our
+model with the complexity needed to answer a broader range of
+questions than previous models. This complexity resulted in extended
+runtimeswhereforourmodeltosimulate12-years,ittookanaverage
+of 8–9h on a desktop. Though lengthy, we found little variation in
+modeloutputbetweenruns,indicatingthatwedidnotneedhundreds
+ofrepetitions.Whereaspreviousmodelsaggregatedmanyofprocesses
+that influence vector populations either spatially or temporally (e.g.,
+Mountetal., 1997;GhoshandPugliese,2004;DobsonandRandolph,
+2011), our IBM approach incorporates both detailed temporal and
+spatial relationships, which are known to be important to the main-
+tenanceof I.scapularis (Ostfeldetal.,1996;Goodwinetal.,2001).With
+few additions, this model can easily incorporate multiple host species
+and disease transmission as well as utilize additional input about
+abiotichabitatconditions.
+Second, we built this model to develop a better understanding of
+Fig. 4.Fourieramplitudesensitivitytest(FAST)resultsforthefiveparameters
+estimated via parameterization for (a) LarvalIxodes scapularisinfestation of
+mice in August, (b) NymphalIxodes scapularis infestation in May and (c)
+nymphal Ixodes scapularisinfestationofdeerinOctober.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+103
+
+PAGE 9
+tickpopulationdynamicsandthemechanismsthroughwhichtheyare
+maintained.Toexploretick-hostassociationsinawaythatallowsusto
+identify the portion of the life-cycle that influences population dy-
+namics ofI. scapularis, our model (1) represents each stage of the life
+cycle of individual ticks, (2) represents interactions between the tick
+and its environment in response to temperature, (3) represents inter-
+actionsofthetickwiththewildlifehostsuponwhichtheyobtaintheir
+bloodmeals,and(4)outputstimeseriesinformationonthenumbersof
+questing and feeding ticks for each life stage. By varying model para-
+meterssuchastickattachmentratesandhostgrooming,wecanlearn
+howthetickpopulationrespondstoperturbationsinthesystem.
+Everymodelbuildsuponpreviouslydevelopedmodels,addingnew
+information which makes the model capable of asking different ques-
+tions. We built our model with our specific objectives in mind, to
+identify which aspects of the ticks lifecycle are important to the
+maintenance of tick populations by employing abottom-up approach.
+Althoughtherearepreviousspatiallyexplicitindividualbasedmodels
+developed, they are either primarily focused on a specific disease
+(Deelmanetal.,1996)orparameterizedfordifferenttickspecies(Wang
+et al., 2012). In addition, including a spatial aspect into models can
+allow for questionsrelated to the role changes in climateand wildlife
+hosts play in tick range expansion (Madhav et al., 2004; Tran and
+Waller,2015).Thoughseveralmodelsemphasizeimportantaspectsof
+tickslifecycle,yetagaintheprimaryfocusremainsonreducinghuman
+diseaserisk(VanBuskirkandOstfeld,1995;Caracoetal.,2002). Van
+BuskirkandOstfeld(1995) suggestthateffortmightbebetterspentat
+reducing theprevalence of disease riskrather than reducing totaltick
+numbers. However, their model was based solely on changes in host
+density,emphasizingtheroledifferentwildlifespeciesplayinfeeding
+specificticklifestages.Fromthispointofview,attemptingtomanage
+disease risk through managing host populationscan be both time and
+costintensive.However,theresultsfromourmodelshowthatyoudo
+notnecessarilyneedtomodifyhostdensitiestohaveanimpactontick
+populations,managementactionsthatreducethenumberofticksable
+tosuccessfullyfeedonhostcanalsobeeffective.
+WechosetodesigntheSEIB-TIMfromtheperspectiveofthetickby
+utilizingaspatialscalethatmimicsmicro-habitatconditionsthataffect
+influence tick development.Additions to this model couldinclude ad-
+ditional environmental characteristics such as relative humidity and
+habitattypesothatthismodelcanbeusetoanswerfurtherquestions
+suchasthoserelatedtoclimatechange(Ogdenetal.,2006).Toprovide
+a more realistic representation of host movements and provide
+sufficienthost-tickencounterrates,weusedahourlytimestepsoasto
+allow the wildlife hosts in our model the ability to cover as much of
+their home range within a 24-h period. However,Wang et al. (2012)
+estimatedthatanIBMwouldneedasmanyas400-timestepsper24-h
+daytocharacterizewildlifehostmovementsaccurately.Forsimplicity
+and to reduce computational time we choseto use hourlyintervals to
+representtheinteractionsinourmodel.
+Regardless of the reduced number of time steps, our model has
+accurately simulated the interactions betweenI. scapularis, wildlife
+hosts,andtheenvironment.Wefirsttestedthemodeltoensurethatthe
+simulatedticksfollowedthelifecycleof I. scapularis,whichhasadis-
+tinct seasonality. Our model is unique in this respect, as previous
+modelstendtoignoretheseasonalpatternsintickabundance(Stanek
+etal.,2012).Tickphenologyiscriticaltothemaintenanceofmanytick-
+bornepathogens(RandolphandStorey,1999).Includingseasonalityin
+our model via temperature driven tick development, tick questing be-
+havior follows the phenology ofI. scapularisin the Northeast where
+nymphs appear in May, larvae appear in late July and peak in mid-
+August,andadultsappearinginearlyfall(Gatewoodetal.,2009).To
+modify this model for other regions would simply involve changing
+temperatureinputsforthedesiredregion.Astemperatureregulatestick
+development,incorporatingtheuniqueaspectofthe Ixodeslife-cyclein
+our model where nymphs appear before larvae is crucial to under-
+standing the factors that contribute to the maintenance of tick-borne
+diseases(RandolphandStorey,1999).
+Possiblecaveatsshouldbekeptinmindwhenattemptingtousethis
+model ecological questions. Modeling a heterogenous habitat would
+likely reduce the tick population further as any ticks that drop from
+their host in non-forest habitat would have decrease probability of
+survivalandtherebyaheterogenoushabitathasthepotentialtoreduce
+overall tick abundance. In addition, not including territoriality in our
+model means that the home ranges of mice are allowed to overlap
+which may give ticks a greater chance of coming into contact with a
+wildlifehostwhereasifterritorieswereineffect,therewouldbeare-
+ducedprobabilityofencounteringahost.Toisolatethecomponentsof
+the ticks life-cycle, we chose to keep wildlife host densities constant,
+although host populations fluctuate based on food resources and sea-
+sonality,changesinhostdensitycanresultincorrespondingoscillations
+in tick populations with a one to two-year lag (Ostfeld et al., 2006).
+However, the relationship between the number of ticks and host pro-
+ceedsnonlinearly(AwerbuchandSpielman,1994),wherelarvaetends
+to concentrate on fewer hosts when host density declines (Levi et al.,
+Table 3
+Oneatatime(OAT)sensitivityresultsforeightmodelparametersonmeannumberofquesting I. scapularisperhectareforyears1,5and10.Valuesarepercent
+differences from the number of questing ticks determined when all parameters are on at their default values. Bold indicates changes greater than 25% in either
+direction.
+Larvae Nymphs Adults
+Parameter Value Year1 Year5 Year10 Year1 Year5 Year10 Year1 Year5 Year10
+Default 124,739 305,329 533,564 921 2,861 12,102 284 792 2,982
+MiceGrooming −10% −3% 1% 45% 30% 26% 25% 9% 34% 10%
++10% −21% −26% −4% −24% −12% −28% −2% −30% −3%
+DeerGrooming 10% 6% 21% 46% 19% 40% 59% 32% 22% 29%
++10% −11% −21% −36% 19% −31% −34% −11% −15% −25%
+Groomingsurvival −10% −7% −5% −11% 21% −12% −13% −1% −11% −19%
++10% 15% 3% 19% 7% 15% 3% 14% −14% 14%
+LarvaeMolting −10% −1% −4% 5% 20% −4% 10% 3% −16% 7%
++10% 3% 1% −5% 11% −20% 3% 13% −15% −7%
+NymphMolting −10% 17% 12% −6% 48% −23% 6% 14% −35% −11%
++10% −10% −14% 8% 18% 8% −8% 4% 6% −19%
+LarvalAttachment −10% −5% −9% −17% −8% −11% −6% 3% −8% −23%
++10% 10% 3% 8% 4% 5% 9% 32% 4% 14%
+NymphalAttachment −10% −6% −12% 2% 3% 1% −4% 42% −3% 8%
++10% 1% 4% 10% 10% 10% 4% −4% 13% 11%
+Adultattachment −10% −2% −11% −23% 10% −21% −16% −17% −11% −21%
++10% 3% 24% 42% 26% 36% 49% 19% 25% 39%
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+104
+
+PAGE 10
+2016),whichmaymeanthatatlower hostdensities,managementac-
+tionshaveapotentiallylargerimpact.
+Although the research area of one hectare that we use for our
+modeling exercise may seem small, we believe that the results of our
+model can extend to larger study areas. Because we use a bottom-up
+approachtoexaminehowtheinteractionsbetweenthetickandwildlife
+hostsinfluencetheoverallmaintenance,therelationshipbetweentick
+grooming, molting and attachments rates and the questing tick popu-
+lation should remain similar at larger spatial scales. Using sensitivity
+analysisallowedustodeterminewhichparametersarecrucialtomodel
+outputandforfuturemodeliterations,itmaybepossibletoremovethe
+negligible aspects of themodel. For example, ourmodel outputis not
+verysensitivetochangesinattachmentrateandnowthatwehavean
+approximationofthesevaluesforeachticklifestage,wecanestimate
+the proportion of ticks that successfully find host. Using only the
+higher-level relationships between ticks and hosts can result in fewer
+behindthescenecomputationaloperations,speedingupthemodeland
+allowingustoincreaseboththetemporalandspatialaspect.Ofcourse,
+increasing the study size will necessitate adding additional wildlife
+hoststoberepresentativeofnaturesinceextensiveforesthabitatserves
+a greater diversity of wildlife than small forest fragments(Rosenblatt
+etal.,1999).Although beyondthescopeof ourcurrentstudy,ourfu-
+ture plans include manipulating the host community composition and
+density of wildlife hosts to test how biodiversity can regulate vectors
+andsubsequentlyinfluencediseaserisk(Keesingetal.,2006).
+5. Summary
+We developed a spatially explicit individual-based tick interaction
+modelfortheblack-leggedtick, I.scapularis,avectorofseveraldiseases
+relevant to human populations. In addition to providing information
+about how components of the tick life-cycle influence tick population
+dynamics, this model serves as the foundation for a more complex
+modelthatcananswerthequestionsresearchersareunabletoaddress
+empirically. We chose to use a simplified model with only mice and
+deer because these two species are thought to be the minimum re-
+quirements for maintaining both a tick population and the pathogens
+that cause tick-borne disease (Ostfeld and Keesing, 2000). As the
+numberofcasesoftick-bornediseasescontinuestorise,thereisaneed
+fornovelstrategiesandtoolstoreducediseaserisk.ThisSEIB-TIMputs
+us one step closer to designing effective prevention and control stra-
+tegies for the organism that propagates disease transmission (Eisen
+etal.,2012).
+Acknowledgements
+Modeling was made possible with funding from an ACM/Intel
+Computational and Data Science Fellowship. This work also benefited
+from the support of a 2016 summer research grant provided by the
+PrograminEcology,EvolutionandConservationBiologyatUniversity
+ofIllinois-Urbana-Champaign.MuchthankstoE.Coonforthehelpwith
+optimizing model for efficiency and J. Westervelt for his guidance
+throughoutmodeldevelopment.
+Appendix A. Supplementary data
+Supplementarydataassociatedwiththisarticlecanbefound,inthe
+onlineversion,at https://doi.org/10.1016/j.ecolmodel.2018.09.005.
+References
+Allan,B.F.,Keesing,F.,Ostfeld,R.S.,2003.Effectofforestfragmentationonlymedisease
+risk.Conserv.Biol.17(1),267–272.
+Awerbuch,T.E.,Spielman,A.,1994.Roleofhostdensityintheecologyoflymedisease.
+LymeBorreliosis.Springer,pp.139–146.
+Beaudouin,R.,Monod,G.,Ginot,V.,2008.Selectingparametersforcalibrationvia
+sensitivityanalysis:anindividual-basedmodelofmosquitofishpopulationdynamics.
+Ecol.Model.218(1),29–48.
+Borgonovo,E.,Apostolakis,G.E.,Tarantola,S.,Saltelli,A.,2003.Comparisonofglobal
+sensitivityanalysistechniquesandimportancemeasuresinPSA.Reliab.Eng.Syst.
+Saf.79(2),175–185.
+Bosler,E.M.,Ormiston,B.G.,Coleman,J.L.,Hanrahan,J.P.,Benach,J.,1984.Prevalence
+ofthelymediseasespirocheteinpopulationsofwhite-taileddeerandwhite-footed
+mice.YaleJ.Biol.Med.57(4),651.
+Branagan,D.,1973.Thedevelopmentalperiodsoftheixodidtick Rhipicephalus appen-
+diculatusNeum.underlaboratoryconditions.Bull.Entomol.Res.63(1),155–168.
+Brownstein,J.S.,Holford,T.R.,Fish,D.,2005.Effectofclimatechangeonlymedisease
+riskinNorthAmerica.EcoHealth2(1),38–46.
+Cadenas,F.M.,Rais,O.,Humair,P.-F.,Douet,V.,Moret,J.,Gern,L.,2007.Identification
+ofhostbloodmealsourceand Borrelia burgdorferisensulatoinfield-collected Ixodes
+ricinusticksinchaumont(switzerland).J.Med.Entomol.44(6),1109–1117.
+Caraco,T.,Gardner,G.,Maniatty,W.,Deelman,E.,Szymanski,B.K.,1998.Lymedisease:
+self-regulationandpathogeninvasion.J.Theor.Biol.193(4),561–575.
+Caraco,T.,Glavanakov,S.,Chen,G.,Flaherty,J.E.,Ohsumi,T.K.,Szymanski,B.K.,2002.
+Stage-structuredinfectiontransmissionandaspatialepidemic:amodelforLyme
+disease.Am.Nat.160(September(3)),348–359.
+Cukier,R.,Fortuin,C.,Shuler,K.E.,Petschek,A.,Schaibly,J.,1973.Studyofthesensi-
+tivityofcoupledreactionsystemstouncertaintiesinratecoefficients.ITheory.J.
+Chem.Phys.59(8),3873–3878.
+Davidar,P.,Wilson,M.,Ribeiro,J.M.,1989.Differentialdistributionofimmature Ixodes
+dammini(acari:Ixodidae)onrodenthosts.J.Parasitol.898–904.
+Deblinger,R.D.,Wilson,M.L.,Rimmer,D.W.,Spielman,A.,1993.Reducedabundanceof
+immature Ixodes dammini(acari:Ixodidae)followingincrementalremovalofdeer.J.
+Med.Entomol.30(1),144–150.
+DechenQuinn,A.C.,Williams,D.M.,Porter,W.F.,2013.Landscapestructureinfluences
+spaceusebywhite-taileddeer.J.Mammal.94(2),398–407.
+Deelman,E.,Caraco,T.,Szymanski,B.K.,1996.ParalleldiscreteeventsimulationofLyme
+disease.Pac.Symp.Biocomput.191–202.
+Dhingra,R.,Jimenez,V.,Chang,H.,Gambhir,M.,Fu,J.,Liu,Y.,Remais,J.,2013.
+Spatially-explicitsimulationmodelingofecologicalresponsetoclimatechange:
+methodologicalconsiderationsinpredictingshiftingpopulationdynamicsofin-
+fectiousdiseasevectors.ISPRSInt.J.Geo-Inf.2(September(3)),645–664.
+Dobson,A.D.M.,Randolph,S.E.,2011.Modellingtheeffectsofrecentchangesinclimate,
+hostdensityandacaricidetreatmentsonpopulationdynamicsof Ixodes ricinusinthe
+UK.J.Appl.Ecol.48(August(4)),1029–1037.
+Dobson,A.,Stuart,K.,2016,February.EpidemiologicalImplicationsofHostBiodiversity
+andVectorBiology:KeyInsightsfromSimpleModels.Unknown.pp.1–18.
+Duffy,D.C.,Campbell,S.R.,Clark,D.,Dimotta,C.,Gurney,S.,1994. Ixodes scapularis
+(Acari:Ixodidae)deertickmesoscalepopulationsinnaturalareas:effectsofdeer,
+area,andlocation.J.Med.Entomol.31(1),152–158.
+Eisen,R.J.,Piesman,J.,Zielinski-Gutierrez,E.,Eisen,L.,2012.Whatdoweneedtoknow
+aboutdiseaseecologytopreventlymediseaseinthenortheasternUnitedStates?J.
+Med.Entomol.49(1),11–22.
+Fish,D.,1993.Populationecologyof Ixodes dammini.In:Ginsberg,H.(Ed.),Ecologyand
+EnvironmentalManagementofLymeDisease.RutgersUniversityPress,New
+Brunswick,NJ,pp.25–42.
+Gaff,H.D.,Gross,L.J.,2007.Modelingtick-bornedisease:ametapopulationmodel.Bull.
+Math.Biol.69(1),265–288.
+Gatewood,A.G.,Liebman,K.A.,Vourc’h,G.,Bunikis,J.,Hamer,S.A.,Cortinas,R.,
+Melton,F.,Cislo,P.,Kitron,U.,Tsao,J.,etal.,2009.Climateandtickseasonalityare
+predictorsof Borrelia burgdorferigenotypedistribution.Appl.Environ.Microbiol.75
+(8),2476–2483.
+Ghosh,M.,Pugliese,A.,2004.Seasonalpopulationdynamicsofticks,anditsinfluenceon
+infectiontransmission:asemi-discreteapproach.Bull.Math.Biol.66(6),1659–1684.
+Ginot,V.,Gaba,S.,Beaudouin,R.,Aries,F.,Monod,H.,2006.Combineduseoflocaland
+ANOVA-basedglobalsensitivityanalysesfortheinvestigationofastochasticdynamic
+model:applicationtothecasestudyofanindividual-basedmodelofafishpopula-
+tion.Ecol.Model.193(3),479–491.
+Goodwin,B.J.,Ostfeld,R.S.,Schauber,E.M.,2001.Spatiotemporalvariationinalyme
+diseasehostandvector:black-leggedticksonwhite-footedmice.VectorBorne
+ZoonoticDis.1(2),129–138.
+Grimm,V.,Berger,U.,DeAngelis,D.L.,Polhill,J.G.,Giske,J.,Railsback,S.F.,2010.The
+oddprotocol:areviewandfirstupdate.Ecol.Model.221(23),2760–2768.
+Grimm,V.,1999.Tenyearsofindividual-basedmodellinginecology:whathavewe
+learnedandwhatcouldwelearninthefuture?Ecol.Model.115(2),129–148.
+Halsey,S.,Miller,J.,2018.TickInteractionModelVersion1.0. Availablefrom:10.5281/
+zenodo.1345210.
+Halsey,S.J.,Allan,B.,Miller,J.,2018.Theroleof Ixodes scapularis,Borreliaburgdorferi
+andwildlifehostsinLymediseaseprevalence:aquantitativereviews.TicksTick-
+borneDis.
+Hamer,S.A.,Hickling,G.J.,Sidge,J.L.,Walker,E.D.,Tsao,J.I.,2012.Synchronous
+phenologyofjuvenile ixodes scapularis,vertebratehostrelationships,andassociated
+patternsofBorreliaburgdorferiribotypesinthemidwesternUnitedStates.Ticks
+Tick-borneDis.3(2),65–74.
+Hazler,K.R.,Ostfeld,R.S.,1995.Larvaldensityandfeedingsuccessof Ixodesscapularis on
+twospeciesofperomyscus.J.Parasitol.81(6),870–875. http://www.jstor.org/
+stable/3284032.
+Horobik,V.,Keesing,F.,Ostfeld,R.S.,2006.AbundanceandBorreliaburgdorferi-infec-
+tionprevalenceofnymphal Ixodes scapularisticksalongforest-fieldedges.EcoHealth
+3(4),262–268.
+Jones,K.E.,Patel,N.G.,Levy,M.A.,Storeygard,A.,Balk,D.,Gittleman,J.L.,Daszak,P.,
+2008.Globaltrendsinemerginginfectiousdiseases.Nature451(7181),990.
+Keesing,F.,Holt,R.D.,Ostfeld,R.S.,2006.Effectsofspeciesdiversityondiseaserisk.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+105
+
+PAGE 11
+Ecol.Lett.9(4),485–498.
+Keesing,F.,Brunner,J.,Duerr,S.,Killilea,M.,LoGiudice,K.,Schmidt,K.,Vuong,H.,
+Ostfeld,R.,2009.Hostsasecologicaltrapsforthevectoroflymedisease.Proc.R.
+Soc.Lond.B:Biol.Sci.276(1675),3911–3919.
+Killilea,M.E.,Swei,A.,Lane,R.S.,Briggs,C.J.,Ostfeld,R.S.,2008.Spatialdynamicsof
+lymedisease:areview.EcoHealth5(2),167–195.
+Kurtenbach,K.,Hanincová,K.,Tsao,J.I.,Margos,G.,Fish,D.,Ogden,N.H.,2006.
+Fundamentalprocessesintheevolutionaryecologyoflymeborreliosis.Nat.Rev.
+Microbiol.4(9),660–669.
+Leighton,P.A.,Koffi,J.K.,Pelcat,Y.,Lindsay,L.R.,Ogden,N.H.,2012.Predictingthe
+speedoftickinvasion:anempiricalmodelofrangeexpansionfortheLymedisease
+vector Ixodes scapularisinCanada.J.Appl.Ecol.49(March(2)),457–464.
+Levi,T.,Keesing,F.,Holt,R.D.,Barfield,M.,Ostfeld,R.S.,2016.Quantifyingdilutionand
+amplificationinacommunityofhostsfortick-bornepathogens.Ecol.Appl.26(2),
+484–498.
+Levin,M.,Fish,D.,1998.Density-dependentfactorsregulatingfeedingsuccessof Ixodes
+scapularislarvae(acari:Ixodidae).J.Parasitol.36–43.
+Lindsay,L.,Mathison,S.,Barker,I.,McEwen,S.,Surgeoner,G.,1999.Abundanceof
+Ixodes scapularis(acari:Ixodidae)larvaeandnymphsinrelationtohostdensityand
+habitatonlongpoint,Ontario.J.Med.Entomol.36(3),243–254.
+LoGiudice,K.,Ostfeld,R.S.,Schmidt,K.A.,Keesing,F.,2003.Theecologyofinfectious
+disease:effectsofhostdiversityandcommunitycompositiononlymediseaserisk.
+Proc.Natl.Acad.Sci.U.S.A.100(2),567–571.
+LoGiudice,K.,Duerr,S.T.,Newhouse,M.J.,Schmidt,K.A.,Killilea,M.E.,Ostfeld,R.S.,
+2008.Impactofhostcommunitycompositiononlymediseaserisk.Ecology89(10),
+2841–2849.
+Madhav,N.K.,Brownstein,J.S.,Tsao,J.I.,Fish,D.,2004.Adispersalmodelfortherange
+expansionofblackleggedtick(acari:Ixodidae).J.Med.Entomol.41(5),842–852.
+Maliyoni,M.,Chirove,F.,Gaff,H.D.,Govinder,K.S.,2017.Astochastictick-bornedisease
+model:exploringtheprobabilityofpathogenpersistence.Bull.Math.Biol.79(July
+(9)),1999–2021.
+Mather,T.N.,Nicholson,M.C.,Donnelly,E.F.,Matyas,B.T.,1996.Entomologicindexfor
+humanriskoflymedisease.Am.J.Epidemiol.144(11),1066–1069.
+McMaster,G.S.,Wilhelm,W.,1997.Growingdegree-days:oneequation,twointer-
+pretations.Agric.For.Meteorol.87(4),291–300.
+Mount,G.A.,Haile,D.G.,Daniels,E.,1997.Simulationofblackleggedtick(acari:
+Ixodidae)populationdynamicsandtransmissionof Borrelia burgdorferi.J.Med.
+Entomol.34(July(4)),461–484.
+NationalOceanicandAtmosphericAdministration,2015.GHCN(GlobalHistorical
+ClimatologyNetwork)–dailydocumentation.DataretrievedfromNOAA'sNational
+ClimaticDataCenter. https://www.ncdc.noaa.gov/cdo-web/datasets.
+Ogden,N.H.,Bigras-Poulin,M.,O’Callaghan,C.J.,Barker,I.K.,Lindsay,L.R.,Maarouf,A.,
+Smoyer-Tomic,K.E.,Waltner-Toews,D.,Charron,D.,2005.Adynamicpopulation
+modeltoinvestigateeffectsofclimateongeographicrangeandseasonalityofthetick
+Ixodes scapularis.Int.J.Parasitol.35(April(4)),375–389.
+Ogden,N.,Maarouf,A.,Barker,I.,Bigras-Poulin,M.,Lindsay,L.,Morshed,M.,
+O’callaghan,C.,Ramay,F.,Waltner-Toews,D.,Charron,D.,2006.Climatechange
+andthepotentialforrangeexpansionoftheLymediseasevector Ixodes scapularisin
+Canada.Int.J.Parasitol.36(1),63–70.
+Ostfeld,R.S.,Keesing,F.,2000.Biodiversityanddiseaserisk:thecaseoflymedisease.
+Conserv.Biol.14(3),722–728.
+Ostfeld,R.S.,Hazler,K.R.,Cepeda,O.M.,1996.Temporalandspatialdynamicsof Ixodes
+scapularis(acari:Ixodidae)inarurallandscape.J.Med.Entomol.33(1),90–95.
+Ostfeld,R.S.,Keesing,F.,Jones,C.G.,Canham,C.D.,Lovett,G.M.,1998.Integrative
+ecologyandthedynamicsofspeciesinoakforests.Integr.Biol.IssuesNewsRev.1
+(5),178–186.
+Ostfeld,R.S.,Price,A.,Hornbostel,V.L.,Benjamin,M.A.,Keesing,F.,2006.Controlling
+ticksandtick-bornezoonoseswithbiologicalandchemicalagents.BioScience56(5),
+383–394.https://doi.org/10.1641/0006-3568(2006)056[0383:CTATZW]2.0.CO;2.
+Ostfeld,R.S.,2009.Climatechangeandthedistributionandintensityofinfectiousdis-
+eases.Ecology90(4),903–905.
+Piesman,J.,Eisen,L.,2008.Preventionoftick-bornediseases.Annu.Rev.Entomol.53,
+323–343.
+Platt,K.,Novak,M.,Rowley,W.,1992.Studiesonthebiologyof Ixodes damminiinthe
+uppermidwestoftheUnitedStates.Ann.N.Y.Acad.Sci.653(1),78–87.
+QualityDeerManagementAssociation,2017.Qdmawhitetailreport,2017.J.Med.
+Entomol.34(4),379–382.
+Rand,P.W.,Lubelczyk,C.,Lavigne,G.R.,Elias,S.,Holman,M.S.,Lacombe,E.H.,Smith
+Jr.,R.P.,2003.Deerdensityandtheabundanceof Ixodes scapularis(acari:Ixodidae).
+J.Med.Entomol.40(2),179–184.
+Randolph,S.E.,Storey,K.,1999.Impactofmicroclimateonimmaturetick-rodenthost
+interactions(acari:Ixodidae):implicationsforparasitetransmission.J.Med.
+Entomol.36(6),741–748.
+Reusser,D.E.,Buytaert,W.,Zehe,E.,2011.Temporaldynamicsofmodelparameter
+sensitivityforcomputationallyexpensivemodelswiththeFourieramplitudesensi-
+tivitytest.WaterResour.Res.47(7).
+Rosenblatt,D.L.,Heske,E.J.,Nelson,S.L.,Barber,D.M.,Miller,M.A.,MacALLISTER,B.,
+1999.Forestfragmentsineast-centralIllinois:islandsorhabitatpatchesformam-
+mals?Am.Midl.Nat.141(1),115–123.
+Saltelli,A.,Tarantola,S.,Campolongo,F.,2000.Sensitivityanalysisasaningredientof
+modeling.Stat.Sci.377–395.
+Sandberg,S.,Awerbuch,T.E.,Spielman,A.,1992.Acomprehensivemultiplematrix
+modelrepresentingthelifecycleofthetickthattransmitsagentoflymedisease.J.
+Theor.Biol.157(2),203–220.
+Schauber,E.M.,Ostfeld,R.S.,EvansJr.,A.S.,2005.Whatisthebestpredictorofannual
+lymediseaseincidence:weather,mice,oracorns?Ecol.Appl.15(2),575–586.
+Schwartz,I.,Fish,D.,Daniels,T.J.,1997.Prevalenceoftherickettsialagentofhuman
+granulocyticehrlichiosisinticksfromahyperendemicfocusoflymedisease.N.Engl.
+J.Med.337(1),49–50.
+Spielman,A.,Wilson,M.,Levine,J.,Piesman,J.,1985.Ecologyof Ixodes dammini-borne
+humanbabesiosisandlymedisease.Annu.Rev.Entomol.30(1),439–460.
+StaffordIII,K.C.,Magnarelli,L.A.,1993.Spatialandtemporalpatternsof Ixodesscapularis
+(acari:Ixodidae)insoutheasternconnecticut.J.Med.Entomol.30(4),762–771.
+StaffordIII,K.C.,Williams,S.C.,Molaei,G.,2017.Integratedpestmanagementincon-
+trollingticksandtick-associateddiseases.J.Integr.PestManage.8(1),28. https://
+doi.org/10.1093/jipm/pmx018.
+Stanek,G.,Wormser,G.P.,Gray,J.,Strle,F.,2012.Lymeborreliosis.Lancet379(9814),
+461–473.
+Tälleklint,L.,Jaenson,T.G.,1994.TransmissionofBorreliaburgdorferislfrommammal
+reservoirstotheprimaryvectoroflymeborreliosis, Ixodesricinus (acari:Ixodidae),in
+Sweden.J.Med.Entomol.31(6),880–886.
+Thiele,J.C.,Kurth,W.,Grimm,V.,2014.Facilitatingparameterestimationandsensitivity
+analysisofagent-basedmodels:acookbookusingnetlogoandr.J.Artif.Soc.Soc.
+Simul.17(3),11.
+Tran,P.,Waller,L.,2015.Variabilityinresultsfromnegativebinomialmodelsforlyme
+diseasemeasuredatdifferentspatialscales.Unknown136(January(C)),373–380.
+VanBuskirk,J.,Ostfeld,R.S.,1995.ControllingLymediseasebymodifyingthedensity
+andspeciescompositionoftickhosts.Ecol.Appl.5(4),1133–1140.
+Wang,H.H.,Grant,W.E.,Teel,P.D.,2012.Simulationofclimate–host–parasite–landscape
+interactions:aspatiallyexplicitmodelforticks(Acari:Ixodidae).Ecol.Model.
+Wang,H.-H.,Grant,W.,Teel,P.,Hamer,S.,2016.Tick-borneinfectiousagentsinnature:
+simulatedeffectsofchangesinhostdensityonspatial–temporalprevalenceofin-
+fectedticks.Ecol.Model.323,77–86.
+Wilensky,U.,1999.Netlogo.CenterforConnectedLearningandComputer-Based
+Modeling.NorthwesternUniversity.
+Wilson,M.L.,Adler,G.H.,Spielman,A.,1985.Correlationbetweenabundanceofdeer
+andthatofthedeertick, Ixodesdammini (acari:Ixodidae).Ann.Entomol.Soc.Am.78
+(2),172–176.
+Wilson,M.L.,1994.Populationecologyoftickvectors:interaction,measurement,and
+analysis.Ecol.Dyn.Tick-borneZoonoses20–44.
+Wolff,J.O.,1985.Theeffectsofdensity,food,andinterspecificinterferenceonhome
+rangesizein Peromyscus leucopusand Peromyscus maniculatus.Can.J.Zool.63(11),
+2657–2662.
+Wood,C.L.,Lafferty,K.D.,DeLeo,G.,Young,H.S.,Hudson,P.J.,Kuris,A.M.,2014.Does
+biodiversityprotecthumansagainstinfectiousdisease?Ecology95(4),817–832.
+Wu,X.,Duvvuri,V.R.S.K.,Wu,J.,2010.Modelingdynamicaltemperatureinfluenceon
+tick Ixodes scapularispopulation.Int.Environ.Model.Softw.Soc.
+S.J. Halsey, J.R. Miller Ecological Modelling 387 (2018) 96–106
+106
+
+PAGE 12
+Update
+Ecological Modelling
+Volume 393, Issue , 1 February 2019, Page 152
+ https://doi.org/10.1016/j.ecolmodel.2018.12.019DOI:
+
+PAGE 13
+Contents lists available at ScienceDirect
+Ecological Modelling
+journal homepage: www.elsevier.com/locate/ecolmodel
+Corrigendum
+Corrigendum to “A spatial agent-based model of the disease vector Ixodes
+scapularis to explore host-tick associations ” [Ecol. Model. 387 (2018)
+96–106]
+Samniqueka J. Halsey a,⁎, James R. Miller b
+a Program in Ecology, Evolution and Conservation Biology, University of Illinois at Urbana-Champaign, Urbana, IL, 61081, USA
+b Department of Natural Resources and Environmental, University of Illinois at Urbana-Champaign, Urbana, IL, 61081, USA
+The authors regret that we have incorrectly cited Dobson and Auld,
+2016 as Dobson and Stewart, 2016. The correct citation is
+Dobson, A.D.M., Auld, S.K.J.R., 2016. Epidemiological implications
+of host biodiversity and vector biology: Key insights from simple
+models. American Naturalist 187, 405 –422.
+The authors would like to apologise for any inconvenience caused.
+https://doi.org/10.1016/j.ecolmodel.2018.12.019
+DOI of original article: https://doi.org/10.1016/j.ecolmodel.2018.09.005
+⁎ Corresponding author.
+E-mail address: shals3@illinois.edu (S.J. Halsey).
+Ecological Modelling 393 (2019) 152
+Available online 04 January 2019
+0304-3800/ © 2018 Published by Elsevier B.V.
+T
