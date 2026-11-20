@@ -17,18 +17,9 @@
 # population can die out; this is a diagnostic trajectory, not a local forecast.
 
 # [1] Locate inputs and load reusable functions -------------------------------
-find_tick_project <- function() {
-  source_files <- unlist(lapply(sys.frames(), function(frame) {
-    if (!is.null(frame$ofile)) as.character(frame$ofile) else character(0)
-  }), use.names = FALSE)
-  cli_files <- sub("^--file=", "", grep("^--file=", commandArgs(), value = TRUE))
-  dirs <- dirname(c(source_files, cli_files))
-  roots <- unique(c(getwd(), dirname(getwd()), dirs, dirname(dirs)))
-  found <- roots[file.exists(file.path(roots, "R_codes", "halsey_tick_core.R"))]
-  if (!length(found)) stop("Run the complete script from the project root or by full path.")
-  normalizePath(found[1], winslash = "/", mustWork = TRUE)
-}
-tick_project_root <- find_tick_project()
+# Same explicit project path as code03. Update this if the project moves.
+tick_project_root <- "D:/github/ABM_4-poster"
+
 source(file.path(tick_project_root, "R_codes", "halsey_tick_core.R"), local = TRUE)
 climate_path <- file.path(tick_project_root, "Results.climate", "halsey_weather_daily.csv")
 if (!file.exists(climate_path)) stop("Run code03.Halsey_climate.R to create daily weather first.")
@@ -45,7 +36,7 @@ tick_output_dir <- file.path(tick_project_root, "Results.ticks_onecell")
 
 # [2] Experiment settings -----------------------------------------------------
 tick_parameters <- halsey_parameters()
-tick_seed <- 123L
+tick_seed <- 123
 # All paper values and adaptation choices are annotated in halsey_tick_core.R.
 # Optional overrides belong here; examples:
 # tick_parameters$cell_area_m2 <- 10000  # one-hectare diagnostic, not a 30 m cell
@@ -78,15 +69,17 @@ tick_result$analysis_initial_count <- if (nrow(tick_burn_in)) {
 # [4] Export daily counts, final cohorts, parameters and checks ----------------
 dir.create(tick_output_dir, recursive = TRUE, showWarnings = FALSE)
 # Main results exclude burn-in. Keep the full run separately for diagnostics.
-export_tick_days <- function(x) {
-  names(x)[names(x) == "date"] <- "internal_date"
-  x
+daily_tables <- list(tick_analysis, tick_daily, tick_burn_in)
+daily_filenames <- c("ticks_daily.csv", "ticks_daily_full_run.csv", "ticks_daily_burn_in.csv")
+for (table_index in seq_along(daily_tables)) {
+  daily_export <- daily_tables[[table_index]]
+  names(daily_export)[names(daily_export) == "date"] <- "internal_date"
+  write.csv(daily_export, file.path(tick_output_dir, daily_filenames[table_index]),
+            row.names = FALSE)
 }
-write.csv(export_tick_days(tick_analysis), file.path(tick_output_dir, "ticks_daily.csv"), row.names = FALSE)
-write.csv(export_tick_days(tick_daily), file.path(tick_output_dir, "ticks_daily_full_run.csv"), row.names = FALSE)
-write.csv(export_tick_days(tick_burn_in), file.path(tick_output_dir, "ticks_daily_burn_in.csv"), row.names = FALSE)
+
 final_cohorts_export <- tick_result$final_cohorts
-final_cohorts_export$eligible_simulation_year <- final_cohorts_export$eligible_year - simulation_start_year + 1L
+final_cohorts_export$eligible_simulation_year <- final_cohorts_export$eligible_year - simulation_start_year + 1
 final_cohorts_export$eligible_year <- NULL
 write.csv(final_cohorts_export, file.path(tick_output_dir, "ticks_final_cohorts.csv"),
           row.names = FALSE)
@@ -98,15 +91,22 @@ parameter_values <- unlist(tick_parameters)
 write.csv(data.frame(parameter = names(parameter_values), value = unname(parameter_values)),
           file.path(tick_output_dir, "parameters.csv"), row.names = FALSE)
 
-annual_full <- do.call(rbind, lapply(split(tick_daily, tick_daily$simulation_year), function(x) {
-  data.frame(simulation_year = x$simulation_year[1], phase = x$phase[1],
-             analysis_year = x$analysis_year[1],
-             peak_questing_L = max(x$L_questing), peak_questing_N = max(x$N_questing),
-             peak_questing_A_females = max(x$A_questing),
-             attached_L = sum(x$attached_L), attached_N = sum(x$attached_N),
-             attached_A = sum(x$attached_A), eggs_laid = sum(x$eggs_laid),
-             year_end_ticks = tail(x$total_ticks, 1))
-}))
+simulation_years <- sort(unique(tick_daily$simulation_year))
+annual_records <- vector("list", length(simulation_years))
+for (year_index in seq_along(simulation_years)) {
+  x <- tick_daily[tick_daily$simulation_year == simulation_years[year_index], ]
+  annual_records[[year_index]] <- data.frame(
+    simulation_year = x$simulation_year[1], phase = x$phase[1],
+    analysis_year = x$analysis_year[1],
+    peak_questing_L = max(x$L_questing), peak_questing_N = max(x$N_questing),
+    peak_questing_A_females = max(x$A_questing),
+    attached_L = sum(x$attached_L), attached_N = sum(x$attached_N),
+    attached_A = sum(x$attached_A), eggs_laid = sum(x$eggs_laid),
+    year_end_ticks = tail(x$total_ticks, 1)
+  )
+}
+annual_full <- do.call(rbind, annual_records)
+
 rownames(annual_full) <- NULL
 annual <- annual_full[annual_full$phase == "analysis", , drop = FALSE]
 write.csv(annual, file.path(tick_output_dir, "ticks_annual_summary.csv"), row.names = FALSE)
@@ -174,6 +174,7 @@ qa <- c(qa, "Review seasonal peaks against field observations and source timing 
 writeLines(qa, file.path(tick_output_dir, "model_assumptions_and_QA.txt"))
 
 # [5] Plot population trajectories and seasonal questing ----------------------
+# Reused for the analysis-only plot and the full-run plot.
 plot_tick_population <- function(daily, path, full_run = FALSE) {
   png(path, width = 1800, height = 1300, res = 160)
   on.exit(dev.off())
@@ -184,16 +185,13 @@ plot_tick_population <- function(daily, path, full_run = FALSE) {
     (daily$day_of_year - 1) / daily$days_in_year
   year_ticks <- unique(if (full_run) daily$simulation_year else daily$analysis_year)
   time_label <- if (full_run) "Simulation year (dashed line: end of burn-in)" else "Analysis year (after burn-in)"
-  draw_time_axis <- function() {
-    axis(1, at = year_ticks, labels = year_ticks)
-    if (full_run && burn_in_years > 0) abline(v = burn_in_years + 1, lty = 2, col = "grey40")
-  }
-  # log1p displays zero counts without inventing nonzero populations.
+  # log10(count + 1) displays zero counts without inventing nonzero populations.
   matplot(model_time, log10(1 + as.matrix(stocks)), type = "l", lty = 1,
           ylim = c(0, max(1, log10(1 + as.matrix(stocks))) * 1.15),
           col = colors, xaxt = "n", xlab = "", ylab = "log10(count + 1)",
           main = "One-cell diagnostic: eggs, larvae, nymphs and adult females")
-  draw_time_axis()
+  axis(1, at = year_ticks, labels = year_ticks)
+  if (full_run && burn_in_years > 0) abline(v = burn_in_years + 1, lty = 2, col = "grey40")
   legend("topleft", c("Eggs", "Larvae", "Nymphs", "Adult females"),
          col = colors, lty = 1, bty = "n", ncol = 4, cex = 0.85)
   feeding <- daily[c("L_feeding", "N_feeding", "A_feeding")]
@@ -201,37 +199,37 @@ plot_tick_population <- function(daily, path, full_run = FALSE) {
           ylim = c(0, max(1, as.matrix(feeding)) * 1.15),
           col = colors[-1], xaxt = "n", xlab = time_label, ylab = "Feeding ticks",
           main = "Ticks feeding on constant host availability")
-  draw_time_axis()
+  axis(1, at = year_ticks, labels = year_ticks)
+  if (full_run && burn_in_years > 0) abline(v = burn_in_years + 1, lty = 2, col = "grey40")
   legend("topleft", c("Larvae on mice", "Nymphs on mice", "Females on deer"),
          col = colors[-1], lty = 1, bty = "n", ncol = 3, cex = 0.85)
 }
 plot_tick_population(tick_analysis, file.path(tick_output_dir, "tick_population.png"))
 plot_tick_population(tick_daily, file.path(tick_output_dir, "tick_population_full_run.png"), full_run = TRUE)
 
-plot_tick_seasons <- function(daily, path) {
-  png(path, width = 1800, height = 1400, res = 160)
-  on.exit(dev.off())
-  par(mfrow = c(3, 1), mar = c(4, 4.5, 2.6, 1), mgp = c(2.5, 0.7, 0))
-  years <- unique(daily$analysis_year)
-  colors <- hcl.colors(length(years), "Dark 3")
-  # Use month/day on a leap-year reference axis so March is aligned across years.
-  seasonal_x <- as.Date(paste0("2000-", format(daily$date, "%m-%d")))
-  ticks <- as.Date(paste0("2000-", sprintf("%02d", 1:12), "-01"))
-  for (stage in c("L", "N", "A")) {
-    values <- daily[[paste0(stage, "_questing")]]
-    plot(range(seasonal_x), c(0, max(1, max(values)) * 1.15), type = "n", xaxt = "n",
-         xlab = "", ylab = "Questing ticks", main = switch(stage,
-           L = "Larvae", N = "Nymphs", A = "Adult females"))
-    axis.Date(1, at = ticks, format = "%b")
-    for (j in seq_along(years)) {
-      idx <- daily$analysis_year == years[j]
-      lines(seasonal_x[idx], values[idx], col = colors[j])
-    }
-    if (stage == "L") legend("topleft", paste("Analysis year", years), col = colors, lty = 1,
-                               ncol = 5, cex = 0.75, bty = "n")
+# Seasonal comparison of the three analysis years.
+png(file.path(tick_output_dir, "tick_seasonality.png"), width = 1800, height = 1400, res = 160)
+par(mfrow = c(3, 1), mar = c(4, 4.5, 2.6, 1), mgp = c(2.5, 0.7, 0))
+years <- unique(tick_analysis$analysis_year)
+colors <- hcl.colors(length(years), "Dark 3")
+# Use month/day on a leap-year reference axis so March is aligned across years.
+seasonal_x <- as.Date(paste0("2000-", format(tick_analysis$date, "%m-%d")))
+ticks <- as.Date(paste0("2000-", sprintf("%02d", 1:12), "-01"))
+for (stage in c("L", "N", "A")) {
+  values <- tick_analysis[[paste0(stage, "_questing")]]
+  plot(range(seasonal_x), c(0, max(1, max(values)) * 1.15), type = "n", xaxt = "n",
+       xlab = "", ylab = "Questing ticks", main = switch(stage,
+         L = "Larvae", N = "Nymphs", A = "Adult females"))
+  axis.Date(1, at = ticks, format = "%b")
+  for (j in seq_along(years)) {
+    idx <- tick_analysis$analysis_year == years[j]
+    lines(seasonal_x[idx], values[idx], col = colors[j])
   }
+  if (stage == "L") legend("topleft", paste("Analysis year", years), col = colors, lty = 1,
+                             ncol = 5, cex = 0.75, bty = "n")
 }
-plot_tick_seasons(tick_analysis, file.path(tick_output_dir, "tick_seasonality.png"))
+dev.off()
+
 cat("\n", paste(qa[1:11], collapse = "\n"), "\n")
 cat("Outputs:", tick_output_dir, "\n")
 print(annual, row.names = FALSE)

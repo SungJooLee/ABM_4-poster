@@ -18,16 +18,7 @@ validate_cohorts <- function(x) {
   invisible(TRUE)
 }
 
-test_parameters <- function() {
-  p <- halsey_parameters()
-  for (key in c("death_unfed_young", "death_unfed_old", "death_replete",
-                 "grooming_hourly", "attachment_hourly")) p[[key]][] <- 0
-  p$death_egg_hourly <- 0
-  p$molt_success[] <- 1
-  p$female_fraction <- 1
-  p
-}
-advance <- function(x, p, n = 1L, date = as.Date("2026-06-01"), cdd = 120, temp = 18) {
+advance <- function(x, p, n = 1, date = as.Date("2026-06-01"), cdd = 120, temp = 18) {
   result <- NULL
   for (i in seq_len(n)) {
     result <- advance_ticks(x, date, cdd, temp, p)
@@ -39,7 +30,14 @@ advance <- function(x, p, n = 1L, date = as.Date("2026-06-01"), cdd = 120, temp 
 }
 passed <- function(label) cat("PASS:", label, "\n")
 
-p <- test_parameters()
+# Shared controlled settings: turn off random losses/attachments unless a test
+# explicitly enables them. This setup runs once for the tests below.
+p <- halsey_parameters()
+for (key in c("death_unfed_young", "death_unfed_old", "death_replete",
+               "grooming_hourly", "attachment_hourly")) p[[key]][] <- 0
+p$death_egg_hourly <- 0
+p$molt_success[] <- 1
+p$female_fraction <- 1
 for (stage in c("L", "N", "A")) {
   x <- new_cohort(stage, "feeding", 5, 2026)
   before <- advance(x, p, p$feeding_hours[stage] / 2 - 1)
@@ -176,25 +174,25 @@ passed("seed reproducibility, exclusive state counts, date continuity and mass b
 # continuity (including leap days) and leaving simulated states untouched.
 calendar <- data.frame(date = seq(as.Date("2001-01-01"), as.Date("2013-12-31"), by = "day"))
 calendar$sentinel_state <- seq_len(nrow(calendar))
-periods <- label_tick_periods(calendar, 10L, 3L)
+periods <- label_tick_periods(calendar, 10, 3)
 csv_calendar <- calendar
 csv_calendar$date <- as.Date(as.character(calendar$date))
-stopifnot(nrow(label_tick_periods(csv_calendar, 10L, 3L)) == nrow(calendar))
+stopifnot(nrow(label_tick_periods(csv_calendar, 10, 3)) == nrow(calendar))
 burn <- periods[periods$phase == "burn_in", ]
 analysis <- periods[periods$phase == "analysis", ]
 stopifnot(nrow(burn) == 3652, nrow(analysis) == 1096,
-          identical(unique(analysis$analysis_year), 1:3),
-          identical(unique(analysis$simulation_year), 11:13),
+          isTRUE(all.equal(unique(analysis$analysis_year), 1:3)),
+          isTRUE(all.equal(unique(analysis$simulation_year), 11:13)),
           all(is.na(burn$analysis_year)), all(is.na(burn$analysis_day)),
           analysis$analysis_day[1] == 1, tail(analysis$analysis_day, 1) == 1096,
           analysis$date[1] == tail(burn$date, 1) + 1,
           analysis$sentinel_state[1] == tail(burn$sentinel_state, 1) + 1,
           identical(periods$sentinel_state, calendar$sentinel_state),
           sum(analysis$month_day == "02-29") == 1)
-no_burn <- label_tick_periods(calendar, 0L, 13L)
+no_burn <- label_tick_periods(calendar, 0, 13)
 stopifnot(all(no_burn$phase == "analysis"), no_burn$analysis_year[1] == 1)
-stopifnot(inherits(try(label_tick_periods(calendar[-1, ], 10L, 3L), silent = TRUE), "try-error"),
-          inherits(try(label_tick_periods(calendar, 10L, 2L), silent = TRUE), "try-error"),
-          inherits(try(label_tick_periods(calendar, -1L, 14L), silent = TRUE), "try-error"))
+stopifnot(inherits(try(label_tick_periods(calendar[-1, ], 10, 3), silent = TRUE), "try-error"),
+          inherits(try(label_tick_periods(calendar, 10, 2), silent = TRUE), "try-error"),
+          inherits(try(label_tick_periods(calendar, -1, 14), silent = TRUE), "try-error"))
 passed("burn-in exclusion, complete duration, leap days and uninterrupted reporting boundary")
 cat("All tick-core behavioral tests passed. These are software checks, not field validation.\n")

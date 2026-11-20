@@ -8,7 +8,7 @@ Final modeled ticks: 64691
 Total eggs laid: 893041
 Population accounting error: 0
 First extinction simulation day: none
-Elapsed seconds: 152.62
+Elapsed seconds: 174.73
 Beginning-of-analysis ticks (carried from burn-in): 75229
 Analysis-only population accounting error: 0
 Main daily/annual outputs and seasonal plots exclude burn-in; full-run files retain it.

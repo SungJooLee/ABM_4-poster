@@ -1,5 +1,6 @@
 # One-cell, stochastic cohort implementation of Halsey-style tick biology.
 # Source this file to define functions only. The runnable example is code04.
+# Functions retained here are reused across time steps, simulations or tests.
 # Source: Halsey & Miller (2018), doi:10.1016/j.ecolmodel.2018.09.005,
 # sections 2.6/2.9, Table 1 and supplementary Table A.1.
 # This is an ADAPTATION, not a verified port of the unavailable NetLogo source.
@@ -9,7 +10,7 @@
 
 halsey_parameters <- function() {
   list(
-    dt_hours = 2L,
+    dt_hours = 2,
     # Halsey Table 1. Interpret /h entries as hourly Bernoulli probabilities,
     # not instantaneous hazards. Hourly death/grooming are processed as two
     # successive substeps so a tick cannot both die and finish a blood meal.
@@ -34,7 +35,7 @@ halsey_parameters <- function() {
     preov_cdd7 = 28,
     preov_hours = 17 * 24,
     autumn_cdd7 = 58,
-    autumn_start_month = 9L,
+    autumn_start_month = 9,
     # No extra egg-development or engorged-nymph delay is invented: the
     # paper does not specify their duration clearly. Temperature gates and
     # post-molt hardening are used. These are priorities for source-code review.
@@ -58,7 +59,7 @@ halsey_parameters <- function() {
     # explicit initial-condition choice can be changed independently of the
     # 50:50 sex allocation applied to newly molted adults.
     initial_females_per_ha = 50,
-    max_cohorts = 100000L,
+    max_cohorts = 100000,
     max_population = 1e8
   )
 }
@@ -88,43 +89,6 @@ merge_cohorts <- function(x) {
   out$n <- as.numeric(rowsum(x$n, groups, reorder = FALSE))
   rownames(out) <- NULL
   out
-}
-
-validate_tick_parameters <- function(p) {
-  # Check user-editable settings once, before running the model.
-  stopifnot(p$dt_hours == 2L, p$cell_area_m2 > 0,
-            p$mice_per_ha >= 0, p$deer_equivalents_per_ha >= 0,
-            p$old_age_hours > 0, p$preov_hours > 0,
-            p$initial_nymphs_per_ha >= 0, p$initial_females_per_ha >= 0)
-  probability_names <- c("attachment_hourly", "death_egg_hourly", "death_unfed_young",
-                         "death_unfed_old", "death_replete", "grooming_hourly",
-                         "grooming_survival", "molt_success", "female_fraction",
-                         "contact_fraction")
-  for (name in probability_names) {
-    value <- p[[name]]
-    if (!length(value) || any(!is.finite(value)) || any(value < 0 | value > 1)) {
-      stop("Invalid probability: ", name)
-    }
-  }
-  stopifnot(all(p$feeding_hours > 0), all(p$hardening_hours >= 0),
-            all(p$capacity_per_mouse >= 0), p$capacity_per_deer >= 0,
-            all(p$feeding_hours %% p$dt_hours == 0),
-            all(p$hardening_hours %% p$dt_hours == 0),
-            p$preov_hours %% p$dt_hours == 0)
-  invisible(TRUE)
-}
-
-initial_tick_cohorts <- function(p, start_year) {
-  # Initialization assumption: overwintering questers begin with age_h = 0.
-  # Their real prior age is unknown; treat early years as initialization effects.
-  # Custom initial cohorts can instead be supplied to run_tick_cell(initial = ...).
-  area_ha <- p$cell_area_m2 / 10000
-  merge_cohorts(rbind(
-    new_cohort("N", "questing", round(p$initial_nymphs_per_ha * area_ha),
-               start_year, dormant = TRUE),
-    new_cohort("A", "questing", round(p$initial_females_per_ha * area_ha),
-               start_year, dormant = TRUE)
-  ))
 }
 
 empty_tick_events <- function() {
@@ -388,9 +352,30 @@ label_tick_periods <- function(daily, burn_in_years, analysis_years) {
   daily
 }
 
-run_tick_cell <- function(weather, p = halsey_parameters(), seed = 123L,
+run_tick_cell <- function(weather, p = halsey_parameters(), seed = 123,
                            initial = NULL, verbose = TRUE) {
-  validate_tick_parameters(p)
+  # Check user-editable settings once, before running the model.
+  stopifnot(p$dt_hours == 2L, p$cell_area_m2 > 0,
+            p$mice_per_ha >= 0, p$deer_equivalents_per_ha >= 0,
+            p$old_age_hours > 0, p$preov_hours > 0,
+            p$initial_nymphs_per_ha >= 0, p$initial_females_per_ha >= 0)
+  probability_names <- c("attachment_hourly", "death_egg_hourly", "death_unfed_young",
+                         "death_unfed_old", "death_replete", "grooming_hourly",
+                         "grooming_survival", "molt_success", "female_fraction",
+                         "contact_fraction")
+  for (name in probability_names) {
+    value <- p[[name]]
+    if (!length(value) || any(!is.finite(value)) || any(value < 0 | value > 1)) {
+      stop("Invalid probability: ", name)
+    }
+  }
+  stopifnot(all(p$feeding_hours > 0), all(p$hardening_hours >= 0),
+            all(p$capacity_per_mouse >= 0), p$capacity_per_deer >= 0,
+            all(p$feeding_hours %% p$dt_hours == 0),
+            all(p$hardening_hours %% p$dt_hours == 0),
+            p$preov_hours %% p$dt_hours == 0)
+
+  # Read and check the climate once, before the daily loop.
   required <- c("date", "cdd7_raw_Cday", "tmean17_C")
   if (!all(required %in% names(weather))) stop("Missing required daily climate columns.")
   weather$date <- as.Date(weather$date)
@@ -400,7 +385,19 @@ run_tick_cell <- function(weather, p = halsey_parameters(), seed = 123L,
   }
   set.seed(seed)
   year0 <- as.integer(format(weather$date[1], "%Y"))
-  x <- if (is.null(initial)) initial_tick_cohorts(p, year0) else initial
+  # Start with dormant nymphs and adult females, or use supplied initial cohorts.
+  # Default stage ages start at zero; early years include initialization effects.
+  if (is.null(initial)) {
+    area_ha <- p$cell_area_m2 / 10000
+    x <- merge_cohorts(rbind(
+      new_cohort("N", "questing", round(p$initial_nymphs_per_ha * area_ha),
+                 year0, dormant = TRUE),
+      new_cohort("A", "questing", round(p$initial_females_per_ha * area_ha),
+                 year0, dormant = TRUE)
+    ))
+  } else {
+    x <- initial
+  }
   # Detailed state/age/timer checks live in tests/test_halsey_tick_core.R.
   # Retain the count check here because callers can supply custom initial ticks.
   if (any(!is.finite(x$n)) || any(x$n < 0 | x$n != floor(x$n))) {
