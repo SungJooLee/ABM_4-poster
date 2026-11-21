@@ -1,68 +1,12 @@
 # One-cell, stochastic cohort implementation of Halsey-style tick biology.
 # Source this file to define functions only. The runnable example is code04.
-# Functions retained here are reused across time steps, simulations or tests.
+# Functions retained here are called repeatedly during the simulation.
 # Source: Halsey & Miller (2018), doi:10.1016/j.ecolmodel.2018.09.005,
 # sections 2.6/2.9, Table 1 and supplementary Table A.1.
 # This is an ADAPTATION, not a verified port of the unavailable NetLogo source.
 # Counts are integers; ticks with identical state/history share one cohort.
 # Mice have no agents or demographic compartments. Their fixed abundance only
 # supplies encounter opportunities and an aggregate feeding capacity.
-
-halsey_parameters <- function() {
-  list(
-    dt_hours = 2,
-    # Halsey Table 1. Interpret /h entries as hourly Bernoulli probabilities,
-    # not instantaneous hazards. Hourly death/grooming are processed as two
-    # successive substeps so a tick cannot both die and finish a blood meal.
-    attachment_hourly = c(L = 0.103726853, N = 0.16788807, A = 0.011786875),
-    death_egg_hourly = 0.00003017683,
-    death_unfed_young = c(L = 0.000213472, N = 0.000003159, A = 0.000000183),
-    death_unfed_old = c(L = 0.000517143, N = 0.000363855, A = 0.000360880),
-    death_replete = c(L = 0.0001317776, N = 0.0000958566, A = 0.0000912404),
-    old_age_hours = 40 * 7 * 24,
-    feeding_hours = c(L = 72, N = 120, A = 240),
-    grooming_hourly = c(L = 0.00734, N = 0.00734, A = 0.00495),
-    grooming_survival = 0.2,
-    molt_success = c(L = 0.415, N = 0.276),
-    female_fraction = 0.5,
-    # Table A.1 specifies a 3-week larval transition, whereas the main text
-    # says 1 week. Use the more detailed appendix for new larvae; expose it
-    # here for sensitivity analysis. Nymph/adult hardening: main text.
-    hardening_hours = c(L = 21 * 24, N = 7 * 24, A = 14 * 24),
-    awaken_cdd7 = c(L = 110, N = 58, A = 28),
-    molt_cdd7 = c(L = 58, N = 81),
-    egg_hatch_cdd7 = 110,
-    preov_cdd7 = 28,
-    preov_hours = 17 * 24,
-    autumn_cdd7 = 58,
-    autumn_start_month = 9,
-    # No extra egg-development or engorged-nymph delay is invented: the
-    # paper does not specify their duration clearly. Temperature gates and
-    # post-molt hardening are used. These are priorities for source-code review.
-    fecundity_coefficients = c(quadratic = -24.6, linear = 836, constant = -4106),
-    # PROVISIONAL exposure multipliers, NOT values estimated by Halsey.
-    # Published attachment probabilities are conditional on nearby hosts.
-    # Here these fractions approximate that proximity for a homogeneous cell.
-    # Do not copy the deer fraction into the later passage-based ABM.
-    contact_fraction = c(L = 0.02, N = 0.02, A = 0.10),
-    # Paper's reference densities; held constant, not local abundance estimates.
-    mice_per_ha = 50,
-    deer_equivalents_per_ha = 2,
-    cell_area_m2 = 900,
-    # Implement the paper's juvenile limits separately for larvae and nymphs,
-    # following the separate larvalthreshold/nymphalthreshold in Table A.1.
-    capacity_per_mouse = c(L = 50, N = 50),
-    capacity_per_deer = 100,
-    initial_nymphs_per_ha = 1500,
-    # Adult compartment contains FEMALES only. For this diagnostic interpret
-    # the paper's initial 50 adults/ha as 50 reproductive females/ha. This
-    # explicit initial-condition choice can be changed independently of the
-    # 50:50 sex allocation applied to newly molted adults.
-    initial_females_per_ha = 50,
-    max_cohorts = 100000,
-    max_population = 1e8
-  )
-}
 
 empty_cohorts <- function() {
   data.frame(stage = character(), state = character(), n = numeric(),
@@ -116,15 +60,14 @@ limit_attachments <- function(proposals, slots) {
   out
 }
 
-advance_ticks <- function(cohorts, date, cdd7, tmean17, p) {
+advance_ticks <- function(cohorts, simulation_year, month, cdd7, tmean17, p) {
   # Each call advances [time, time+2h). Entries created at the END of this
   # interval cannot feed, hatch, or molt again within the same interval.
   # Hourly mortality/grooming substeps preserve event ordering over two hours.
   events <- empty_tick_events()
   before <- sum(cohorts$n)
   if (!nrow(cohorts)) return(list(cohorts = cohorts, events = events, balance_error = 0))
-  year <- as.integer(format(date, "%Y"))
-  month <- as.integer(format(date, "%m"))
+  year <- simulation_year
   x <- cohorts
   # Dormancy is an independent flag so overwintering never erases fed status
   # or accumulated developmental time. Dormant ticks still experience mortality.
@@ -257,7 +200,7 @@ advance_ticks <- function(cohorts, date, cdd7, tmean17, p) {
     x$timer_h[idx] <- 0
     if (stage == "L") {
       # New nymphs must not quest in the same year they fed as larvae.
-      # They harden first, then wait until the following calendar year.
+      # They harden first, then wait until the following simulation year.
       x$eligible_year[idx] <- year + 1L
       events["new_nymphs"] <- sum(successful)
     } else {
@@ -317,113 +260,4 @@ tick_snapshot <- function(x) {
       x$state %in% c("hardening", "engorged", "preoviposition")])
   }
   c(result, total_ticks = sum(x$n), cohorts = nrow(x))
-}
-
-# Assign reporting periods AFTER a single continuous biological simulation.
-# Never restart ticks or RNG at the burn-in boundary. Require complete years
-# so a partial climate file cannot silently shorten either requested period.
-label_tick_periods <- function(daily, burn_in_years, analysis_years) {
-  stopifnot(length(burn_in_years) == 1L, is.finite(burn_in_years),
-            burn_in_years >= 0, burn_in_years == floor(burn_in_years),
-            length(analysis_years) == 1L, is.finite(analysis_years),
-            analysis_years >= 1, analysis_years == floor(analysis_years))
-  dates <- as.Date(daily$date)
-  if (!length(dates) || anyNA(dates)) stop("Missing simulation dates.")
-  year0 <- as.integer(format(dates[1], "%Y"))
-  expected <- seq(as.Date(sprintf("%04d-01-01", year0)),
-                  as.Date(sprintf("%04d-01-01", year0 + burn_in_years + analysis_years)) - 1,
-                  by = "day")
-  # CSV-parsed Date values and seq.Date may use different numeric storage.
-  if (length(dates) != length(expected) || any(dates != expected)) {
-    stop("Need complete consecutive years matching burn-in + analysis duration.")
-  }
-  years <- as.integer(format(dates, "%Y"))
-  daily$simulation_day <- seq_along(dates)
-  daily$simulation_year <- years - year0 + 1L
-  daily$day_of_year <- as.integer(format(dates, "%j"))
-  daily$month_day <- format(dates, "%m-%d")
-  daily$days_in_year <- as.integer(as.Date(sprintf("%04d-01-01", years + 1L)) -
-                                   as.Date(sprintf("%04d-01-01", years)))
-  daily$phase <- ifelse(daily$simulation_year <= burn_in_years, "burn_in", "analysis")
-  daily$analysis_year <- ifelse(daily$phase == "analysis",
-                                daily$simulation_year - burn_in_years, NA_integer_)
-  daily$analysis_day <- NA_integer_
-  daily$analysis_day[daily$phase == "analysis"] <- seq_len(sum(daily$phase == "analysis"))
-  daily
-}
-
-run_tick_cell <- function(weather, p = halsey_parameters(), seed = 123,
-                           initial = NULL, verbose = TRUE) {
-  # Check user-editable settings once, before running the model.
-  stopifnot(p$dt_hours == 2L, p$cell_area_m2 > 0,
-            p$mice_per_ha >= 0, p$deer_equivalents_per_ha >= 0,
-            p$old_age_hours > 0, p$preov_hours > 0,
-            p$initial_nymphs_per_ha >= 0, p$initial_females_per_ha >= 0)
-  probability_names <- c("attachment_hourly", "death_egg_hourly", "death_unfed_young",
-                         "death_unfed_old", "death_replete", "grooming_hourly",
-                         "grooming_survival", "molt_success", "female_fraction",
-                         "contact_fraction")
-  for (name in probability_names) {
-    value <- p[[name]]
-    if (!length(value) || any(!is.finite(value)) || any(value < 0 | value > 1)) {
-      stop("Invalid probability: ", name)
-    }
-  }
-  stopifnot(all(p$feeding_hours > 0), all(p$hardening_hours >= 0),
-            all(p$capacity_per_mouse >= 0), p$capacity_per_deer >= 0,
-            all(p$feeding_hours %% p$dt_hours == 0),
-            all(p$hardening_hours %% p$dt_hours == 0),
-            p$preov_hours %% p$dt_hours == 0)
-
-  # Read and check the climate once, before the daily loop.
-  required <- c("date", "cdd7_raw_Cday", "tmean17_C")
-  if (!all(required %in% names(weather))) stop("Missing required daily climate columns.")
-  weather$date <- as.Date(weather$date)
-  if (!nrow(weather) || anyNA(weather$date) || any(diff(weather$date) != 1) ||
-      any(!is.finite(weather$cdd7_raw_Cday)) || any(!is.finite(weather$tmean17_C))) {
-    stop("Daily climate must be consecutive with complete rolling indices.")
-  }
-  set.seed(seed)
-  year0 <- as.integer(format(weather$date[1], "%Y"))
-  # Start with dormant nymphs and adult females, or use supplied initial cohorts.
-  # Default stage ages start at zero; early years include initialization effects.
-  if (is.null(initial)) {
-    area_ha <- p$cell_area_m2 / 10000
-    x <- merge_cohorts(rbind(
-      new_cohort("N", "questing", round(p$initial_nymphs_per_ha * area_ha),
-                 year0, dormant = TRUE),
-      new_cohort("A", "questing", round(p$initial_females_per_ha * area_ha),
-                 year0, dormant = TRUE)
-    ))
-  } else {
-    x <- initial
-  }
-  # Detailed state/age/timer checks live in tests/test_halsey_tick_core.R.
-  # Retain the count check here because callers can supply custom initial ticks.
-  if (any(!is.finite(x$n)) || any(x$n < 0 | x$n != floor(x$n))) {
-    stop("Initial tick counts must be nonnegative whole numbers.")
-  }
-  initial_count <- sum(x$n)
-  records <- vector("list", nrow(weather))
-  for (day in seq_len(nrow(weather))) {
-    event_sum <- empty_tick_events()
-    balance_error <- 0
-    for (step in seq_len(24L / p$dt_hours)) {
-      result <- advance_ticks(x, weather$date[day], weather$cdd7_raw_Cday[day],
-                               weather$tmean17_C[day], p)
-      x <- result$cohorts
-      event_sum <- event_sum + result$events
-      balance_error <- max(balance_error, abs(result$balance_error))
-    }
-    records[[day]] <- c(tick_snapshot(x), event_sum, balance_error = balance_error)
-    if (verbose && (format(weather$date[day], "%m-%d") == "12-31" || day == nrow(weather))) {
-      cat("Simulation year", as.integer(format(weather$date[day], "%Y")) - year0 + 1L,
-          format(weather$date[day], "%m-%d"), ":", sum(x$n), "ticks in", nrow(x), "cohorts\n")
-    }
-  }
-  daily <- data.frame(date = weather$date, do.call(rbind, records), row.names = NULL)
-  daily$cdd7 <- weather$cdd7_raw_Cday
-  daily$tmean17_C <- weather$tmean17_C
-  list(daily = daily, final_cohorts = x, initial_count = initial_count,
-       parameters = p, seed = seed)
 }

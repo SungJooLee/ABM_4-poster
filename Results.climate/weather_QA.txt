@@ -1,25 +1,24 @@
 NOAA / Halsey repeating five-year climatology
 Input: D:/github/ABM_4-poster/NOAA_ClimateData_2020-2025.csv
 Station: USW00004781
-Configured input temperature units: C
 CSV headers do not verify units; confirm Celsius in the NOAA download settings.
 Observed input calendar: 2020-01-01 through 2025-12-31
 Five-year baseline: 2021, 2022, 2023, 2024, 2025
 TMIN/TMAX are averaged separately by month/day, with no stochastic weather.
-Feb 29 is the mean of the Feb 28 and Mar 1 normal temperatures.
+Every simulation year repeats 365 days, excluding Feb 29.
 Duration: 10 burn-in years + 3 analysis years
-internal_date is a dummy seasonal clock, not an observation/forecast date.
-Daily rows: 4748
+Simulation years/days are model indices; month_day labels the season only.
+Daily rows: 4745
 Absent input dates: 0
 Input days missing TMIN or TMAX: 0
-Two-hour rows: 56976
+Two-hour rows: 56940
 First simulation day with complete climate history: 1
 Raw DD = (TMIN + TMAX)/2 - 6. Negative values are retained.
-CDD7 = trailing seven-calendar-day SUM, including the current date.
-Tmean17 = trailing 17-calendar-day MEAN of (TMIN + TMAX)/2.
+CDD7 = trailing seven-simulation-day SUM, including the current day.
+Tmean17 = trailing 17-simulation-day MEAN of (TMIN + TMAX)/2.
 Zero-clipped DD and CDD7 are separate sensitivity-analysis columns.
 Windows use a 16-day lead-in from the preceding climatological cycle.
-Windows do not reset on January 1. Leap days can change nearby rolling indices.
+Windows continue across year boundaries; all years have identical rolling indices.
 This is a five-year station climatology, not an official NOAA normal product.
 Daily weather repeats over 12 steps, not measured two-hour temperatures.
 No tick transitions are inferred solely from crossing a plotted threshold.
