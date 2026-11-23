@@ -1,4 +1,4 @@
 "simulation_year","phase","analysis_year","peak_questing_L","peak_questing_N","peak_questing_A_females","attached_L","attached_N","attached_A","eggs_laid","year_end_ticks"
-11,"analysis",1,54109,2083,77,11315,2494,141,98935,68953
-12,"analysis",2,65144,2121,89,11338,2548,169,77158,52110
-13,"analysis",3,66272,2144,105,11311,2553,192,101100,57070
+11,"analysis",1,66356,2151,100,11290,2569,166,98961,70125
+12,"analysis",2,57010,2141,65,11251,2557,135,67340,47039
+13,"analysis",3,69051,2152,88,11272,2594,159,89872,51024

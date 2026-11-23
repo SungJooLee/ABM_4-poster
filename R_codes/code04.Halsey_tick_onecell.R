@@ -118,77 +118,91 @@ days <- tick_weather$simulation_day
 expected <- model_calendar(days)
 
 tick_elapsed <- system.time({
-  # Check user-editable settings once, before running the model.
-  probability_names <- c("attachment_hourly", "death_egg_hourly", "death_unfed_young",
-                         "death_unfed_old", "death_replete", "grooming_hourly",
-                         "grooming_survival", "molt_success", "female_fraction",
-                         "contact_fraction")
-  for (name in probability_names) {
-    value <- tick_parameters[[name]]
-  }
   set.seed(tick_seed)
   year0 <- tick_weather$simulation_year[1]
 
-  # Start with dormant nymphs and adult females, or use supplied initial cohorts.
-  # Default stage ages start at zero; early years include initialization effects.
-  if (is.null(tick_initial)) {
-    area_ha <- tick_parameters$cell_area_m2 / 10000
-    x <- merge_cohorts(rbind(
-      new_cohort("N", "questing", round(tick_parameters$initial_nymphs_per_ha * area_ha),
-                 year0, dormant = TRUE),
-      new_cohort("A", "questing", round(tick_parameters$initial_females_per_ha * area_ha),
-                 year0, dormant = TRUE)
-    ))
-  } else {
-    x <- tick_initial
-  }
+  # Start with dormant nymphs and adult females
+  # Halsey started with 1500 nymphs and 50 adults for 1-ha. For our 0.09ha scale, recalculate.
+  area_ha <- tick_parameters$cell_area_m2 / 10000
+  x <- merge_cohorts(rbind(
+    new_cohort("N", "questing", round(tick_parameters$initial_nymphs_per_ha * area_ha),
+               year0, dormant = TRUE),
+    new_cohort("A", "questing", round(tick_parameters$initial_females_per_ha * area_ha),
+               year0, dormant = TRUE)
+  ))
+  
   # Detailed state/age/timer checks live in tests/test_halsey_tick_core.R.
   # Check counts here because tick_initial can supply custom initial ticks.
   initial_count <- sum(x$n)
-  records <- vector("list", nrow(tick_weather))
-  for (day in seq_len(nrow(tick_weather))) {
+  records <- vector("list", nrow(tick_weather)) # keeping track of daily logs
+  for (day in 1:(nrow(tick_weather))) { # nrow(tick_weather)
     event_sum <- empty_tick_events()
     balance_error <- 0
-    for (step in seq_len(24L / tick_parameters$dt_hours)) {
+    
+    # run 2-hour steps for 12 times (one day)
+    for (step in seq_len(24 / tick_parameters$dt_hours)) {
       result <- advance_ticks(x, tick_weather$simulation_year[day], tick_weather$month[day], tick_weather$cdd7_raw_Cday[day],
                                tick_weather$tmean17_C[day], tick_parameters)
       x <- result$cohorts
       event_sum <- event_sum + result$events
       balance_error <- max(balance_error, abs(result$balance_error))
     }
+    # daily records
     records[[day]] <- c(tick_snapshot(x), event_sum, balance_error = balance_error)
-    if (tick_verbose && (tick_weather$day_of_year[day] == 365L || day == nrow(tick_weather))) {
+    
+    # If verbose = T, report every end of year
+    if (tick_verbose && (tick_weather$day_of_year[day] == 365 || day == nrow(tick_weather))) {
       cat("Simulation year", tick_weather$simulation_year[day],
           tick_weather$month_day[day], ":", sum(x$n), "ticks in", nrow(x), "cohorts\n")
     }
   }
+  
+  # Final data compute
   calendar_columns <- c("simulation_day", "simulation_year", "day_of_year", "month",
                         "month_day", "days_in_year")
-  daily <- data.frame(tick_weather[calendar_columns], do.call(rbind, records), row.names = NULL)
+  daily <- data.frame(tick_weather[calendar_columns], 
+                      do.call(rbind, records), row.names = NULL)
   daily$cdd7 <- tick_weather$cdd7_raw_Cday
   daily$tmean17_C <- tick_weather$tmean17_C
-  tick_result <- list(daily = daily, final_cohorts = x, initial_count = initial_count,
-       parameters = tick_parameters, seed = tick_seed)
+  
+  tick_result <- list(daily = daily, # row as daily output
+                      final_cohorts = x, # final cohort dataframe
+                      initial_count = initial_count,
+                      parameters = tick_parameters, 
+                      seed = tick_seed)
 })
+tick_result
+
+
 # Add the reporting labels to the simulated daily results.
 reporting_columns <- c("phase", "analysis_year", "analysis_day")
 tick_daily <- cbind(tick_result$daily, tick_weather[reporting_columns])
 tick_analysis <- tick_daily[tick_daily$phase == "analysis", , drop = FALSE]
 tick_burn_in <- tick_daily[tick_daily$phase == "burn_in", , drop = FALSE]
+
+# update 'daily' dataframe with weather columns
 tick_result$daily <- tick_daily
+# append other elements
 tick_result$analysis_daily <- tick_analysis
 tick_result$burn_in_years <- burn_in_years
 tick_result$analysis_years <- analysis_years
+
 # Beginning-of-analysis population is the preceding day's END stock.
-tick_result$analysis_initial_count <- if (nrow(tick_burn_in)) {
-  tail(tick_burn_in$total_ticks, 1)
-} else {
-  tick_result$initial_count
-}
+tick_result$analysis_initial_count <- 
+  if (nrow(tick_burn_in)) {
+    tail(tick_burn_in$total_ticks, 1)
+  } else {
+    tick_result$initial_count
+  }
 
 # [4] Export daily counts, final cohorts, parameters and checks ----------------
 dir.create(tick_output_dir, recursive = TRUE, showWarnings = FALSE)
-# Main results exclude burn-in. Keep the full run separately for diagnostics.
+
+# ---- Save the daily and final cohort results ---- #
+# Store the three daily tables in a list:
+# 1. Analysis period only
+# 2. Entire simulation, including burn-in
+# 3. Burn-in period only
 daily_tables <- list(tick_analysis, tick_daily, tick_burn_in)
 daily_filenames <- c("ticks_daily.csv", "ticks_daily_full_run.csv", "ticks_daily_burn_in.csv")
 for (table_index in seq_along(daily_tables)) {
@@ -197,19 +211,26 @@ for (table_index in seq_along(daily_tables)) {
             row.names = FALSE)
 }
 
+# Save final cohorts
 final_cohorts_export <- tick_result$final_cohorts
 final_cohorts_export$eligible_simulation_year <- final_cohorts_export$eligible_year
 final_cohorts_export$eligible_year <- NULL
+
 write.csv(final_cohorts_export, file.path(tick_output_dir, "ticks_final_cohorts.csv"),
           row.names = FALSE)
+
+# ---- Save the complete R result object ---- #
 # RDS retains exact column types and settings for later inspection/restarts.
 # A restart also needs RNG state and initial clock conventions; this file is
 # an analysis artifact, not an automatic checkpoint/resume implementation.
 saveRDS(tick_result, file.path(tick_output_dir, "ticks_onecell_result.rds"))
+
+# ---- Save the parameter values used in this run ---- #
 parameter_values <- unlist(tick_parameters)
 write.csv(data.frame(parameter = names(parameter_values), value = unname(parameter_values)),
           file.path(tick_output_dir, "parameters.csv"), row.names = FALSE)
 
+# ---- Build one summary row per simulation year ---- #
 simulation_years <- sort(unique(tick_daily$simulation_year))
 annual_records <- vector("list", length(simulation_years))
 for (year_index in seq_along(simulation_years)) {
@@ -231,17 +252,18 @@ annual <- annual_full[annual_full$phase == "analysis", , drop = FALSE]
 write.csv(annual, file.path(tick_output_dir, "ticks_annual_summary.csv"), row.names = FALSE)
 write.csv(annual_full, file.path(tick_output_dir, "ticks_annual_summary_full_run.csv"), row.names = FALSE)
 
+# ---- Calculate the values used in the text report ---- #
 loss_columns <- c("deaths_natural", "deaths_grooming", "deaths_molting",
                   "males_removed", "mothers_removed")
-total_losses <- sum(as.matrix(tick_daily[loss_columns]))
 balance <- tail(tick_daily$total_ticks, 1) -
-  (tick_result$initial_count + sum(tick_daily$eggs_laid) - total_losses)
+  (tick_result$initial_count + sum(tick_daily$eggs_laid) -
+     sum(as.matrix(tick_daily[loss_columns])))
 analysis_balance <- tail(tick_analysis$total_ticks, 1) -
   (tick_result$analysis_initial_count + sum(tick_analysis$eggs_laid) -
      sum(as.matrix(tick_analysis[loss_columns])))
-# Each two-hour step already checks population accounting in the core.
-# These totals are reported below for inspection, without duplicate stops.
 extinction <- tick_daily$simulation_day[tick_daily$total_ticks == 0]
+
+# ---- Prepare the text report ---- #
 qa <- c(
   "Halsey-style one-cell diagnostic: NOT a calibrated spatial tick forecast",
   paste("Climate input:", climate_path),
@@ -281,6 +303,8 @@ qa <- c(
   "Original NetLogo archive could not be retrieved; these timing choices need source-code review.",
   "Passing accounting/unit checks does not establish empirical phenology or abundance accuracy."
 )
+
+# Add the final analysis year's seasonal questing peaks 
 last_year <- tick_analysis[tick_analysis$analysis_year == analysis_years, ]
 for (stage in c("L", "N", "A")) {
   values <- last_year[[paste0(stage, "_questing")]]
@@ -289,6 +313,7 @@ for (stage in c("L", "N", "A")) {
                                              last_year$month_day[which.max(values)])
                    else "none", "(count:", max(values), ")"))
 }
+
 qa <- c(qa, "Review seasonal peaks against field observations and source timing rules before spatial coupling.")
 writeLines(qa, file.path(tick_output_dir, "model_assumptions_and_QA.txt"))
 
@@ -352,3 +377,49 @@ dev.off()
 cat("\n", paste(qa[1:11], collapse = "\n"), "\n")
 cat("Outputs:", tick_output_dir, "\n")
 print(annual, row.names = FALSE)
+
+# [6] Plot questing ticks across the entire run, including burn-in ------------
+# Use tick_daily, not tick_analysis, to show all 13 configured years.
+# Each stage has its own count axis so smaller adult counts remain visible.
+questing_path <- file.path(tick_output_dir, "tick_questing_full_run.png")
+png(questing_path, width = 1400, height = 1100, res = 140, pointsize = 12)
+par(mfrow = c(3, 1), mar = c(3.8, 7, 2.2, 1),
+    oma = c(0.5, 0, 4, 0), mgp = c(2.8, 0.7, 0),
+    cex = 1.05, cex.axis = 1, cex.lab = 1.1, las = 1)
+
+# Daily counts are measured at day end; day 365 is elapsed year 1.
+questing_time <- tick_daily$simulation_day / 365
+run_years <- max(tick_daily$simulation_year)
+stage_colors <- c(L = "darkorange3", N = "steelblue", A = "firebrick")
+stage_labels <- c(L = "Questing larvae (L)", N = "Questing nymphs (N)",
+                  A = "Questing adult females (A)")
+
+for (stage in c("L", "N", "A")) {
+  values <- tick_daily[[paste0(stage, "_questing")]]
+  plot(questing_time, values, type = "n", xaxt = "n",
+       xlim = c(0, run_years), xaxs = "i",
+       ylim = c(0, max(1, max(values)) * 1.1), yaxs = "i",
+       xlab = if (stage == "A") "Elapsed simulation years" else "",
+       ylab = "", main = stage_labels[stage])
+  mtext("Number of ticks", side = 2, line = 5.2, las = 0, cex = 1.05)
+
+  # Shade burn-in and mark the boundary where analysis begins.
+  if (burn_in_years > 0) {
+    rect(0, 0, min(burn_in_years, run_years), par("usr")[4],
+         col = "grey93", border = NA)
+  }
+  abline(v = seq.int(0, run_years), col = "grey85", lty = 3)
+  lines(questing_time, values, col = stage_colors[stage], lwd = 1.6)
+  if (burn_in_years > 0 && burn_in_years < run_years) {
+    abline(v = burn_in_years, col = "grey35", lty = 2, lwd = 1.5)
+  }
+  axis(1, at = seq.int(0, run_years))
+  box()
+}
+mtext(paste("Questing ticks across", run_years, "simulation years"),
+      outer = TRUE, line = 2, cex = 1.25, font = 2)
+mtext(paste("Shaded: burn-in | Dashed line: analysis begins |",
+            "Daily end-of-day counts; separate count axes"),
+      outer = TRUE, line = 0.5, cex = 0.9)
+dev.off()
+cat("Full-run questing plot:", questing_path, "\n")

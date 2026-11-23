@@ -4,12 +4,12 @@ Duration: 10 burn-in years + 3 analysis years
 Seed: 123
 Cell area (m2): 900
 Initial modeled ticks: 139
-Final modeled ticks: 57070
-Total eggs laid: 982583
+Final modeled ticks: 51024
+Total eggs laid: 971728
 Population accounting error: 0
 First extinction simulation day: none
-Elapsed seconds: 169.8
-Beginning-of-analysis ticks (carried from burn-in): 56028
+Elapsed seconds: unavailable (report regenerated from saved results)
+Beginning-of-analysis ticks (carried from burn-in): 66575
 Analysis-only population accounting error: 0
 Main daily/annual outputs and seasonal plots exclude burn-in; full-run files retain it.
 Model time repeats a 365-day cycle; simulation years are numbered from 1, with no Feb 29.
@@ -28,7 +28,7 @@ Transitions/new attachments occur at interval end; no same-interval transition c
 Natural mortality applies before grooming; host slots free at detachment become usable next step.
 Winter dormancy pauses off-host development/preoviposition but not mortality or ongoing feeding.
 Autumn dormancy is latched until next simulation year; new nymphs also wait until next year.
-Larval hardening defaults to 21 days (supplement); main text says 7 days.
+Larval hardening uses 7 days, following the main text rather than Table A.1's 21 days.
 No additional egg-development or engorged-nymph incubation duration was specified clearly.
 Adults can reproduce in warm autumn if gates/timers permit; no undocumented spring-only gate.
 Negative polynomial fecundity is clipped to 0; eggs per female are rounded to integers.
@@ -36,7 +36,7 @@ Seven-day DD is a rolling sum; negative DD follows the printed equation in code0
 All detachment/grooming survivors stay in the cell in this nonspatial diagnostic.
 Original NetLogo archive could not be retrieved; these timing choices need source-code review.
 Passing accounting/unit checks does not establish empirical phenology or abundance accuracy.
-Final-year questing peak L : analysis year 3 10-01 (count: 66272 )
-Final-year questing peak N : analysis year 3 05-12 (count: 2144 )
-Final-year questing peak A : analysis year 3 07-01 (count: 105 )
+Final-year questing peak L : analysis year 3 09-17 (count: 69051 )
+Final-year questing peak N : analysis year 3 05-12 (count: 2152 )
+Final-year questing peak A : analysis year 3 06-28 (count: 88 )
 Review seasonal peaks against field observations and source timing rules before spatial coupling.

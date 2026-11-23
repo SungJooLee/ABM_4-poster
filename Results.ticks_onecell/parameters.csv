@@ -4,6 +4,7 @@
 "attachment_hourly.N",0.16788807
 "attachment_hourly.A",0.011786875
 "death_egg_hourly",3.017683e-05
+"old_age_hours",6720
 "death_unfed_young.L",0.000213472
 "death_unfed_young.N",3.159e-06
 "death_unfed_young.A",1.83e-07
@@ -13,7 +14,6 @@
 "death_replete.L",0.0001317776
 "death_replete.N",9.58566e-05
 "death_replete.A",9.12404e-05
-"old_age_hours",6720
 "feeding_hours.L",72
 "feeding_hours.N",120
 "feeding_hours.A",240
@@ -24,7 +24,7 @@
 "molt_success.L",0.415
 "molt_success.N",0.276
 "female_fraction",0.5
-"hardening_hours.L",504
+"hardening_hours.L",168
 "hardening_hours.N",168
 "hardening_hours.A",336
 "awaken_cdd7.L",110
